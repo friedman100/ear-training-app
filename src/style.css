@@ -56,3 +56,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .piano-credit{text-align:center;font-size:10px;color:#86927f;margin:0 16px 20px}.piano-credit a{color:inherit}
 
 .session-counter{display:flex;justify-content:center;align-items:center;gap:17px;margin:18px auto 8px;padding:9px 16px;width:fit-content;max-width:100%;border:1px solid #dfe7d8;background:#f4f7ef;border-radius:11px;color:#41603d;font-size:13px}.session-counter strong{font-weight:600}.session-counter small{display:block;font-size:10px;color:#798971}.counter-streak{border-inline-start:1px solid #d5dfcc;padding-inline-start:17px;white-space:nowrap}
+
+.brand{min-width:0}.brand-icon{flex-shrink:0}.brand>span:last-child{min-width:0}.intro h1{max-width:940px;line-height:1.4}@media(max-width:760px){header .brand{font-size:16px;gap:9px}header .brand small{font-size:10px;letter-spacing:0}.brand-icon{width:40px;height:40px}header .quiet{flex-shrink:0}}
