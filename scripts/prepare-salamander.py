@@ -17,7 +17,7 @@ for note in range(48,97):
  original=min(source_notes,key=lambda n:abs(n-note));src=source_notes[original]
  info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_entries','stream=sample_rate','-of','json',str(src)]))
  rate=int(info['streams'][0]['sample_rate'])
- filters=f'asetrate={rate*2**((note-original)/12):.8f},aresample=44100,atrim=duration=1.2,asetpts=PTS-STARTPTS'
+ filters=f'asetrate={rate*2**((note-original)/12):.8f},aresample=44100,atrim=duration=3.0,apad=whole_dur=3.0,asetpts=PTS-STARTPTS'
  raw=subprocess.check_output(['ffmpeg','-v','error','-i',str(src),'-af',filters,'-ar','44100','-ac','2','-f','f32le','-'])
  data=array.array('f');data.frombytes(raw);scaled=array.array('f',(v*gain for v in data))
  peak=max(abs(v) for v in scaled);assert peak<.95,(note,peak)

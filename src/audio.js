@@ -1,6 +1,6 @@
 export const NOTE_DURATION=.8;
 export const NOTE_GAP=.05;
-export const RELEASE_TAIL=.35;
+export const RELEASE_TAIL=1.4;
 export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+RELEASE_TAIL+.05)*1000);
 let context;
 const buffers=new Map();
@@ -28,7 +28,9 @@ export async function play(start,end,onPlaybackChange=()=>{}){
  gain.gain.setValueAtTime(0,t);
  gain.gain.linearRampToValueAtTime(1,t+.015);
  gain.gain.setValueAtTime(1,t+NOTE_DURATION-.3);
- gain.gain.linearRampToValueAtTime(.18,t+NOTE_DURATION);
+ // Exponential release falls to -80 dB before the final silent stop.
+ gain.gain.exponentialRampToValueAtTime(.35,t+NOTE_DURATION);
+ gain.gain.exponentialRampToValueAtTime(.0001,t+NOTE_DURATION+RELEASE_TAIL-.02);
  gain.gain.linearRampToValueAtTime(0,t+NOTE_DURATION+RELEASE_TAIL);
  if(i===1)source.onended=()=>{if(request===generation)onPlaybackChange(false);};
  source.start(t);source.stop(t+NOTE_DURATION+RELEASE_TAIL);sources.push(source);

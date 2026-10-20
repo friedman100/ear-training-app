@@ -19,7 +19,7 @@ test('downloaded HTML boots from a file URL and supports range change and playba
  const saved=initialState();saved.range='low';
  w.localStorage.setItem('ear-training-v1',JSON.stringify(saved));
  let played=0;
- w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(buffer){assert.ok(buffer.byteLength>1000);return Promise.resolve({});}createBufferSource(){return {connect(){},start(){played++;},stop(){}};}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
+ w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(buffer){assert.ok(buffer.byteLength>1000);return Promise.resolve({});}createBufferSource(){return {connect(){},start(){played++;},stop(){}};}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
  w.fetch=async url=>{assert.ok(url.startsWith('data:audio/mpeg;base64,'));return {ok:true,arrayBuffer:async()=>Uint8Array.from(Buffer.from(url.split(',')[1],'base64')).buffer};};
  w.setTimeout=fn=>{queueMicrotask(fn);return 1;};
  scripts.forEach(source=>w.eval(source));

@@ -10,7 +10,7 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  globalThis.AudioContext=class{
  currentTime=10;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}
  createBufferSource(){const note={connect(){},start(t){this.startTime=t;},stop(t){if(t!==undefined)this.stopTime=t;}};notes.push(note);return note;}
- createGain(){const events=[];envelopes.push(events);return {connect(){},gain:{setValueAtTime(v,t){events.push({type:'set',v,t});},linearRampToValueAtTime(v,t){events.push({type:'ramp',v,t});}}};}
+ createGain(){const events=[];envelopes.push(events);return {connect(){},gain:{setValueAtTime(v,t){events.push({type:'set',v,t});},linearRampToValueAtTime(v,t){events.push({type:'ramp',v,t});},exponentialRampToValueAtTime(v,t){events.push({type:'exponential',v,t});}}};}
  };
  try{
  for(const pair of [[60,67],[60,67],[72,76]]){
@@ -25,8 +25,10 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  assert.ok(envelope[1].t>envelope[0].t&&envelope[1].t-envelope[0].t<.03);
  assert.equal(envelope[1].v,1); // Samples carry the audition's calibrated level.
  assert.equal(envelope.at(-1).v,0);
- assert.equal(envelope.at(-2).v,.18);
- assert.ok(Math.abs(envelope.at(-1).t-envelope.at(-2).t-RELEASE_TAIL)<1e-9);
+ assert.equal(envelope.at(-2).type,'exponential');
+ assert.equal(envelope.at(-2).v,.0001);
+ assert.ok(Math.abs(envelope.at(-1).t-envelope.at(-2).t-.02)<1e-9);
+ assert.ok(envelope.at(-2).t-envelope[2].t>1.5);
  }
  assert.ok(10+PLAYBACK_DURATION_MS/1000>=second.stopTime);
  }

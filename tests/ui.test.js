@@ -10,7 +10,7 @@ function setup(saved,controlled=false,sessionSaved){
  if(sessionSaved)w.localStorage.setItem('ear-training-session-v1',sessionSaved);
  if(saved)w.localStorage.setItem('ear-training-v1',saved);
  w.structuredClone=structuredClone;w.playedNotes=0;w.audioSources=[];w.audioTimers=[];
- w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(){w.playedNotes++;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
+ w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(){w.playedNotes++;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
  w.setTimeout=(fn,ms)=>{if(controlled)w.audioTimers.push({fn,ms});else queueMicrotask(fn);return 1;};
  w.eval(source);return w;
