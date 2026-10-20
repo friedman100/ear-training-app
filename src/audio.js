@@ -1,4 +1,4 @@
-export const NOTE_DURATION=.9;
+export const NOTE_DURATION=.8;
 export const NOTE_GAP=.05;
 export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+.05)*1000);
 let context;

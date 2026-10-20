@@ -50,3 +50,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .practice-end{margin-top:22px;padding-top:18px;border-top:1px solid #e2e7de}.practice-end .end-session{min-width:170px;padding:11px 24px;font-size:14px;font-weight:500;color:#4b6248;background:#f5f7f1;border:1px solid #bdcbb5;border-radius:10px}.practice-end .end-session:hover{background:#eaf0e2;border-color:#8fa883}
 
 .practice-actions{flex-direction:row-reverse}
+
+#next{display:inline-flex;direction:rtl;align-items:center;justify-content:center;gap:9px}

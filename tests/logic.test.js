@@ -45,4 +45,4 @@ test('storage round trips and safely recovers from bad data',()=>{
  let s=initialState();s.range='high';assert.deepEqual(load({getItem:()=>JSON.stringify(s)}),s);
  for(const value of ['bad','null','{}',JSON.stringify({...s,selected:[]}),JSON.stringify({...s,stage:99})])assert.deepEqual(load({getItem:()=>value}),initialState());
 });
-test('audio timing matches requested note length and silence',()=>{assert.equal(NOTE_DURATION,.9);assert.equal(NOTE_GAP,.05);});
+test('audio timing matches requested note length and silence',()=>{assert.equal(NOTE_DURATION,.8);assert.equal(NOTE_GAP,.05);});
