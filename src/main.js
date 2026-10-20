@@ -24,6 +24,7 @@ function render(){
  <h2>איזה מרווח שמעתם?</h2><p class="muted">הקשיבו לשני הצלילים ובחרו את המרווח ביניהם.</p>
  <div class="practice-actions">${button('listen',busy?'◌ &nbsp; משמיע…':heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','המרווח הבא ←','next'):''}</div>
  <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div>
+ <section class="quick-range" aria-label="מנעד הפסנתר"><div class="quick-range-heading"><strong>מנעד הפסנתר</strong><span>בחרו והמשיכו לתרגל</span></div><div class="ranges" role="group" aria-label="בחירת מנעד">${[['low','נמוך'],['middle','אמצעי'],['high','גבוה']].map(([id,name])=>`<button data-range="${id}" aria-pressed="${state.range===id}" class="${state.range===id?'selected':''}">${name}</button>`).join('')}</div></section>
  <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||busy||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}</button>`).join('')}</div>
  <div class="feedback" role="status">${q.solved?'יפה מאוד! זיהיתם את המרווח.':wrong.length?'עוד ניסיון — הקשיבו שוב ונסו תשובה אחרת.':heard?'קחו את הזמן. האוזן לומדת בכל ניסיון.':'לחצו על האזנה כדי להתחיל.'}</div>
  </section><aside><section class="panel progress"><div class="section-title"><span class="tiny-icon">↗</span><h3>${state.mode==='guided'?'המסלול שלכם':'בוחרים מה לתרגל'}</h3></div>
@@ -45,7 +46,7 @@ function bind(){
  if(result.first)state=record(state,q,result.correct);
  q=result.q;if(!result.correct&&!wrong.includes(id))wrong.push(id);save();render();
  });
- document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{state.range=b.dataset.range;save();next();});
+ document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{if(state.range===b.dataset.range)return;state.range=b.dataset.range;save();next();});
  document.querySelectorAll('input[type=checkbox]').forEach(b=>b.onchange=()=>{
  const id=Number(b.value);if(!b.checked&&state.selected.length===1){b.checked=true;notice='יש לבחור לפחות מרווח אחד.';render();return;}
  state.selected=b.checked?[...state.selected,id]:state.selected.filter(n=>n!==id);save();next();
