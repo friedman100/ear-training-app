@@ -25,9 +25,9 @@ test('downloaded HTML boots from a file URL and supports range change and playba
  scripts.forEach(source=>w.eval(source));
  assert.ok(w.document.querySelector('#listen'));
  assert.equal(Object.keys(w.PIANO_SAMPLES).length,49);
- assert.equal(w.document.querySelector('.quick-range [aria-pressed="true"]').dataset.range,'low');
- w.document.querySelector('.quick-range [data-range="high"]').click();
- assert.equal(w.document.querySelector('.quick-range [aria-pressed="true"]').dataset.range,'high');
+ assert.equal(w.document.querySelector('#piano-range').value,'low');
+ w.document.querySelector('#piano-range').value='high';w.document.querySelector('#piano-range').dispatchEvent(new w.Event('change'));
+ assert.equal(w.document.querySelector('#piano-range').value,'high');
  w.document.querySelector('#listen').click();
  for(let i=0;i<80;i++)await Promise.resolve();
  assert.equal(played,2);

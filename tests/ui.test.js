@@ -7,8 +7,8 @@ const source=await readFile('dist/assets/'+asset,'utf8');
 function setup(saved){
  const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';
  if(saved)w.localStorage.setItem('ear-training-v1',saved);
- w.structuredClone=structuredClone;
- w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){return {connect(){},start(){},stop(){}};}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
+ w.structuredClone=structuredClone;w.playedNotes=0;
+ w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){return {connect(){},start(){w.playedNotes++;},stop(){}};}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
  w.setTimeout=fn=>{queueMicrotask(fn);return 1;};
  w.eval(source);return w;
@@ -27,7 +27,7 @@ test('complete exercise, unlimited replays, one first-attempt result per questio
  assert.equal(d.querySelector('#next').parentElement,d.querySelector('#listen').parentElement);
  assert.ok(d.querySelector('.practice-actions').compareDocumentPosition(d.querySelector('.answers')) & 4);
  assert.equal(stored(w).stats.guided.total,1);assert.equal(stored(w).stats.guided.correct,wrong?0:1);
- d.querySelector('#next').click();assert.equal(d.querySelector('#next'),null);assert.equal(d.querySelector('.correct'),null);
+ const beforeNext=w.playedNotes;d.querySelector('#next').click();await flush();assert.equal(w.playedNotes,beforeNext+2);assert.ok(!d.querySelector('[data-answer]').disabled);assert.equal(d.querySelector('#next'),null);assert.equal(d.querySelector('.correct'),null);
  await w.happyDOM.close();
 });
 test('free selection, minimum one interval, settings and persisted reload',async()=>{
@@ -36,6 +36,9 @@ test('free selection, minimum one interval, settings and persisted reload',async
  d.querySelector('input:checked').click();assert.equal(d.querySelectorAll('input:checked').length,1);
  d.querySelector('input:checked').click();assert.equal(d.querySelectorAll('input:checked').length,1);
  d.querySelector('#settings').click();d.querySelector('[data-range="high"]').click();d.querySelector('#close-settings').click();
+ assert.ok(d.querySelector('aside #piano-range'));assert.equal(d.querySelector('.practice #piano-range'),null);
+ d.querySelector('#piano-range').value='low';d.querySelector('#piano-range').dispatchEvent(new w.Event('change'));assert.equal(stored(w).range,'low');
+ d.querySelector('#piano-range').value='high';d.querySelector('#piano-range').dispatchEvent(new w.Event('change'));
  const saved=w.localStorage.getItem('ear-training-v1');assert.equal(stored(w).range,'high');assert.equal(stored(w).stats.guided.total,0);
  const reloaded=setup(saved);assert.equal(reloaded.document.querySelector('#free').className,'selected');assert.equal(reloaded.document.querySelectorAll('input:checked').length,1);
  await w.happyDOM.close();await reloaded.happyDOM.close();

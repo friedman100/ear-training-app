@@ -24,10 +24,10 @@ function render(){
  <h2>איזה מרווח שמעתם?</h2><p class="muted">הקשיבו לשני הצלילים ובחרו את המרווח ביניהם.</p>
  <div class="practice-actions">${button('listen',busy?'◌ &nbsp; משמיע…':heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','המרווח הבא ←','next'):''}</div>
  <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div>
- <section class="quick-range" aria-label="מנעד הפסנתר"><div class="quick-range-heading"><strong>מנעד הפסנתר</strong><span>בחרו והמשיכו לתרגל</span></div><div class="ranges" role="group" aria-label="בחירת מנעד">${[['low','נמוך'],['middle','אמצעי'],['high','גבוה']].map(([id,name])=>`<button data-range="${id}" aria-pressed="${state.range===id}" class="${state.range===id?'selected':''}">${name}</button>`).join('')}</div></section>
+
  <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||busy||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}</button>`).join('')}</div>
  <div class="feedback" role="status">${q.solved?'יפה מאוד! זיהיתם את המרווח.':wrong.length?'עוד ניסיון — הקשיבו שוב ונסו תשובה אחרת.':heard?'קחו את הזמן. האוזן לומדת בכל ניסיון.':'לחצו על האזנה כדי להתחיל.'}</div>
- </section><aside><section class="panel progress"><div class="section-title"><span class="tiny-icon">↗</span><h3>${state.mode==='guided'?'המסלול שלכם':'בוחרים מה לתרגל'}</h3></div>
+ </section><aside><div class="range-setting"><label for="piano-range">⚙ מנעד הפסנתר</label><select id="piano-range">${[['low','נמוך'],['middle','אמצעי'],['high','גבוה']].map(([id,name])=>`<option value="${id}" ${state.range===id?'selected':''}>${name}</option>`).join('')}</select></div><section class="panel progress"><div class="section-title"><span class="tiny-icon">↗</span><h3>${state.mode==='guided'?'המסלול שלכם':'בוחרים מה לתרגל'}</h3></div>
  ${state.mode==='guided'?`<p>מתקדמים צעד־צעד, בונים ביטחון.</p><div class="steps">${STAGES.map((s,i)=>`<div class="step ${i===state.stage?'current':''} ${i<state.stage?'done':''}"><span class="step-number">${i<state.stage?'✓':i+1}</span><span>${i===0?'קוורטה וקווינטה זכות':INTERVALS[s.at(-1)]}${i===5?'<small>תחילת חלק ב׳</small>':''}</span><span class="step-status">${i===state.stage?'בתרגול':i>state.stage?'·':''}</span></div>`).join('')}</div>${finished?`<p class="success-text">${state.complete?'המסלול הושלם!':'חלק א׳ הושלם — אפשר לעבור לחלק ב׳.'}</p>`:`<section class="unlock-progress" aria-label="התקדמות למרווח הבא"><h4>${goal}</h4><div class="progress-label"><span>תשובות נכונות בניסיון הראשון</span><b>${correctCount} / ${target}</b></div><div class="track" role="progressbar" aria-label="תשובות נכונות לקראת השלב הבא" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${progressValue}" aria-valuetext="${correctCount} תשובות נכונות מתוך יעד של ${target}"><i style="width:${stagePct}%"></i></div><p class="progress-status" role="status">${correctCount<target?`עוד ${target-correctCount} תשובות נכונות ליעד`:'יעד התשובות הנכונות הושג ✓'}${state.history.length<n?` · נותרו ${n-state.history.length} שאלות להשלמת החלון`:''}${!covered?' · נדרש כיסוי של כל המרווחים הפעילים':''}</p><p class="fine">${state.history.length} מתוך ${n} שאלות בחלון. נדרשים 80% הצלחה בניסיון הראשון ולפחות שתי שאלות בכל מרווח. הבר משקף את החלון האחרון ועשוי לרדת כשתשובות ישנות יוצאות ממנו.</p></section>`}${state.partAComplete&&state.stage===4?button('partB','חלק א׳ הושלם! מעבר לחלק ב׳','next'):''}${state.complete?'<p class="success-text">כל המרווחים פתוחים. ממשיכים לתרגל!</p>':''}`:
  `<p>בחרו מרווח אחד או יותר. ההתקדמות במסלול המודרך נשמרת בנפרד.</p><div class="choices">${INTERVALS.slice(1).map((name,i)=>`<label><input type="checkbox" value="${i+1}" ${state.selected.includes(i+1)?'checked':''}>${name}</label>`).join('')}</div>`}</section></aside></div>
  <section class="stats" aria-label="מדדי הצלחה"><div><span class="stat-icon">⚡</span><strong>${stats.streak}</strong><span>רצף הצלחות בניסיון הראשון</span></div><div><span class="stat-icon">◎</span><strong>${pct}<small>%</small></strong><span>הצלחה בניסיון הראשון</span></div><div><span class="stat-icon">♫</span><strong>${stats.total}</strong><span>שאלות שתרגלתם במצב הזה</span></div></section>
@@ -39,13 +39,14 @@ function render(){
 }
 function bind(){
  const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
- on('listen',()=>listen());on('next',next);on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
+ on('listen',()=>listen());on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
  ['guided','free'].forEach(mode=>on(mode,()=>{state.mode=mode;save();next();}));
  document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{
  const id=Number(b.dataset.answer);const result=answer(q,id);if(result.ignored||!heard||busy)return;
  if(result.first)state=record(state,q,result.correct);
  q=result.q;if(!result.correct&&!wrong.includes(id))wrong.push(id);save();render();
  });
+ const rangeSelect=document.getElementById('piano-range');if(rangeSelect)rangeSelect.value=state.range;if(rangeSelect)rangeSelect.onchange=()=>{if(state.range===rangeSelect.value)return;state.range=rangeSelect.value;save();next();};
  document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>{if(state.range===b.dataset.range)return;state.range=b.dataset.range;save();next();});
  document.querySelectorAll('input[type=checkbox]').forEach(b=>b.onchange=()=>{
  const id=Number(b.value);if(!b.checked&&state.selected.length===1){b.checked=true;notice='יש לבחור לפחות מרווח אחד.';render();return;}
