@@ -60,3 +60,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .brand{min-width:0}.brand-icon{flex-shrink:0}.brand>span:last-child{min-width:0}.intro h1{max-width:940px;line-height:1.4}@media(max-width:760px){header .brand{font-size:16px;gap:9px}header .brand small{font-size:10px;letter-spacing:0}.brand-icon{width:40px;height:40px}header .quiet{flex-shrink:0}}
 
 .exercise-instruction{font-size:16px;font-weight:500;line-height:1.7;color:#3f5848;margin:9px auto 12px;max-width:560px}
+
+.practice .unlock-progress{max-width:420px;margin:24px auto 0;padding:0;background:transparent;border:0;border-radius:0;text-align:right}.practice .unlock-progress .progress-label{font-size:11px;color:#7a8d70;align-items:center}.practice .unlock-progress .progress-label b{font-size:11px;font-weight:400;color:#87967f}.practice .unlock-progress .track{height:5px;margin:7px 0 0;background:#ecf0e7}.practice .unlock-progress .track i{background:#8aa87a}.practice .unlock-progress .success-text{font-size:12px;text-align:center}
