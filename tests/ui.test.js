@@ -203,7 +203,7 @@ test('live session counter shows completed first-attempt successes and resets fo
  const nextId=JSON.parse(w.localStorage.getItem('ear-training-session-v1')).current.q.interval;
  d.querySelector(`[data-answer="${nextId}"]`).click();
  assert.ok(d.querySelector('.session-counter').textContent.includes('1 מתוך 2 נכונים'));
- assert.ok(d.querySelector('.counter-streak').textContent.includes('1'));
+ assert.equal(d.querySelector('.counter-streak'),null);
  d.querySelector('#end-session').click();d.querySelector('#new-session').click();
  assert.ok(d.querySelector('.session-counter').textContent.includes('0 מתוך 0 נכונים'));
  await w.happyDOM.close();
