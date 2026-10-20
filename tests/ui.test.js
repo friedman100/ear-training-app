@@ -172,3 +172,20 @@ test('recovers a completed guided question from an empty older session without t
  assert.equal(JSON.parse(again.localStorage.getItem('ear-training-session-v1')).total,1);
  await w.happyDOM.close();await again.happyDOM.close();
 });
+
+test('answers unlock at the second note while the release continues',async()=>{
+ const w=setup(undefined,true),d=w.document;
+ d.querySelector('#listen').click();await flush();
+ assert.ok(d.querySelector('[data-answer]').disabled);
+ w.audioTimers.find(t=>t.ms===30).fn();
+ assert.ok(d.querySelector('[data-answer]').disabled);
+ w.audioTimers.find(t=>t.ms===880).fn();
+ assert.ok(!d.querySelector('[data-answer]').disabled);
+ assert.ok(d.querySelector('.is-playing'));
+ const id=JSON.parse(w.localStorage.getItem('ear-training-session-v1')).current.q.interval;
+ d.querySelector(`[data-answer="${id}"]`).click();
+ assert.ok(d.querySelector('.correct'));assert.ok(d.querySelector('.is-playing'));
+ assert.equal(JSON.parse(w.localStorage.getItem('ear-training-session-v1')).total,1);
+ w.audioSources.at(-1).onended();w.audioTimers.find(t=>t.ms===PLAYBACK_DURATION_MS).fn();await flush();
+ assert.ok(d.querySelector('#next'));await w.happyDOM.close();
+});

@@ -7,7 +7,7 @@ const buffers=new Map();
 let sources=[];
 let generation=0;
 export function stop(){generation++;sources.forEach(s=>{try{s.stop();}catch{}});sources=[];}
-export async function play(start,end,onPlaybackChange=()=>{}){
+export async function play(start,end,onPlaybackChange=()=>{},onSecondNote=()=>{}){
  stop();const request=generation;
  context??=new AudioContext();
  await context.resume();
@@ -36,5 +36,6 @@ export async function play(start,end,onPlaybackChange=()=>{}){
  source.start(t);source.stop(t+NOTE_DURATION+RELEASE_TAIL);sources.push(source);
  });
  setTimeout(()=>{if(request===generation)onPlaybackChange(true);},30);
+ setTimeout(()=>{if(request===generation)onSecondNote();},Math.round((.03+NOTE_DURATION+NOTE_GAP)*1000));
  await new Promise(resolve=>setTimeout(resolve,PLAYBACK_DURATION_MS));
 }

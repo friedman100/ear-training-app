@@ -10,7 +10,7 @@ const active=()=>state.mode==='guided'?STAGES[state.stage]:state.selected;
 function saveSession(){session.current={q,mode:state.mode,range:state.range,wrong};try{storage.setItem(SESSION_KEY,JSON.stringify(session));}catch{notice='לא ניתן לשמור את התרגול בדפדפן הזה.';}}
 function save(){saveSession();try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
 function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);saveSession();render();}
-async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}});if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
+async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}});if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
  if(session.ended){renderSummary();return;}
@@ -30,7 +30,7 @@ function render(){
  <div class="practice-actions">${button('listen',busy?(playing?'◌ &nbsp; משמיע…':'◌ &nbsp; מכין צלילים…'):heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','<span aria-hidden="true">→</span><span>המרווח הבא</span>','next'):''}</div>
  <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div>
 
- <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||busy||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></button>`).join('')}</div>
+ <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></button>`).join('')}</div>
  <div class="feedback" role="status">${q.solved?'יפה מאוד! זיהיתם את המרווח.':wrong.length?'עוד ניסיון — הקשיבו שוב ונסו תשובה אחרת.':heard?'קחו את הזמן. האוזן לומדת בכל ניסיון.':'לחצו על האזנה כדי להתחיל.'}</div>
  <div class="practice-end">${button('end-session','סיום תרגול','end-session')}</div>
  </section><aside><div class="range-setting"><label for="piano-range">⚙ מנעד הפסנתר</label><select id="piano-range" aria-describedby="range-position">${[['low','נמוך'],['middle','אמצעי'],['high','גבוה']].map(([id,name])=>`<option value="${id}" ${state.range===id?'selected':''}>${name}</option>`).join('')}</select><span id="range-position" dir="ltr" title="טווח התווים במקלדת">${{low:'C3–C5',middle:'C4–C6',high:'C5–C7'}[state.range]}</span></div><section class="panel progress"><div class="section-title"><span class="tiny-icon">↗</span><h3>${state.mode==='guided'?'המסלול שלכם':'בוחרים מה לתרגל'}</h3></div>
@@ -49,7 +49,7 @@ function bind(){
  on('listen',()=>listen());on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
  ['guided','free'].forEach(mode=>on(mode,()=>{state.mode=mode;save();next();}));
  document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{
- const id=Number(b.dataset.answer);const result=answer(q,id);if(result.ignored||!heard||busy)return;
+ const id=Number(b.dataset.answer);const result=answer(q,id);if(result.ignored||!heard)return;
  // Persist completion independently of guided progression and its unlock dialogs.
  if(result.q.solved&&!q.sessionRecorded){session=completeQuestion(session,result.q);result.q.sessionRecorded=true;q=result.q;saveSession();}
  if(result.first){const previous=state.stage;state=record(state,q,result.correct);if(state.mode==='guided'&&state.stage>previous)session=noteUnlocks(session,STAGES[state.stage].filter(id=>!STAGES[previous].includes(id)));}
