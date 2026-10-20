@@ -1,5 +1,6 @@
-export const NOTE_DURATION=.6;
+export const NOTE_DURATION=.9;
 export const NOTE_GAP=.05;
+export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+.05)*1000);
 let context;
 const buffers=new Map();
 let sources=[];
@@ -22,10 +23,14 @@ export async function play(start,end,onPlaybackChange=()=>{}){
  notes.forEach((midi,i)=>{
  const source=context.createBufferSource(),gain=context.createGain(),t=time+i*(NOTE_DURATION+NOTE_GAP);
  source.buffer=buffers.get(midi);source.connect(gain);gain.connect(context.destination);
- gain.gain.setValueAtTime(.8,t);gain.gain.setValueAtTime(.8,t+NOTE_DURATION-.025);gain.gain.linearRampToValueAtTime(0,t+NOTE_DURATION);
+ // Preserve the recorded piano's natural decay; soften its attack and release.
+ gain.gain.setValueAtTime(0,t);
+ gain.gain.linearRampToValueAtTime(.65,t+.015);
+ gain.gain.setValueAtTime(.65,t+NOTE_DURATION-.3);
+ gain.gain.linearRampToValueAtTime(0,t+NOTE_DURATION);
  if(i===1)source.onended=()=>{if(request===generation)onPlaybackChange(false);};
  source.start(t);source.stop(t+NOTE_DURATION);sources.push(source);
  });
  setTimeout(()=>{if(request===generation)onPlaybackChange(true);},30);
- await new Promise(resolve=>setTimeout(resolve,1300));
+ await new Promise(resolve=>setTimeout(resolve,PLAYBACK_DURATION_MS));
 }

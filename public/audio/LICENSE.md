@@ -8,4 +8,4 @@ License: Creative Commons Attribution 3.0 (CC BY 3.0).
 https://creativecommons.org/licenses/by/3.0/
 
 Notes C3–C7 are included as original MP3 samples. Playback uses the original pitch,
-with a gain envelope to end each note at 0.6 seconds.
+with a gain envelope to end each note at 0.9 seconds.

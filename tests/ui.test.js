@@ -2,6 +2,7 @@ import {Window} from 'happy-dom';
 import {readFile,readdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {PLAYBACK_DURATION_MS} from '../src/audio.js';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js'));
 const source=await readFile('dist/assets/'+asset,'utf8');
 function setup(saved,controlled=false,sessionSaved){
@@ -67,10 +68,10 @@ test('playback feedback follows scheduled start and final note end, and replay r
  assert.ok(d.querySelector('.practice.is-playing'));
  w.audioSources.at(-1).onended();
  assert.equal(d.querySelector('.is-playing'),null);
- w.audioTimers.find(t=>t.ms===1300).fn();await flush();
+ w.audioTimers.find(t=>t.ms===PLAYBACK_DURATION_MS).fn();await flush();
  assert.ok(!d.querySelector('[data-answer]').disabled);
  d.querySelector('#listen').click();await flush();assert.equal(w.playedNotes,4);
- w.audioTimers.filter(t=>t.ms===1300).at(-1).fn();await flush();
+ w.audioTimers.filter(t=>t.ms===PLAYBACK_DURATION_MS).at(-1).fn();await flush();
  await w.happyDOM.close();
 });
 test('free answer buttons retain ascending semitone order between questions',async()=>{
