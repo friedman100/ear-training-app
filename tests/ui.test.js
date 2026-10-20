@@ -24,6 +24,8 @@ test('complete exercise, unlimited replays, one first-attempt result per questio
  d.querySelector('[data-answer]').click();let wrong=!!d.querySelector('.wrong');
  if(wrong){assert.equal(d.querySelector('.correct'),null);assert.equal(d.querySelector('#next'),null);d.querySelectorAll('[data-answer]')[1].click();}
  assert.ok(d.querySelector('.correct'));assert.ok(d.querySelector('#next'));
+ assert.equal(d.querySelector('#next').parentElement,d.querySelector('#listen').parentElement);
+ assert.ok(d.querySelector('.practice-actions').compareDocumentPosition(d.querySelector('.answers')) & 4);
  assert.equal(stored(w).stats.guided.total,1);assert.equal(stored(w).stats.guided.correct,wrong?0:1);
  d.querySelector('#next').click();assert.equal(d.querySelector('#next'),null);assert.equal(d.querySelector('.correct'),null);
  await w.happyDOM.close();
