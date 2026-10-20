@@ -1,0 +1,10 @@
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+const base='public/piano-comparison/';
+const html=await readFile(base+'index.html','utf8');
+const script=await readFile(base+'player.js','utf8');
+const {notes}=JSON.parse(await readFile(base+'measurements.json','utf8'));
+const audio={};
+for(const bank of ['current','salamander'])for(const note of notes)audio[`${bank}-${note}`]=(await readFile(`${base}${bank}-${note}.mp3`)).toString('base64');
+const result=html.replace('<script type="module" src="./player.js"></script>',()=>`<script>window.PIANO_COMPARISON=${JSON.stringify(audio)};</script><script type="module">${script.replaceAll('</script','<\\/script')}</script>`);
+await mkdir('demo',{recursive:true});await writeFile('demo/piano-comparison.html',result);
+console.log(`Packaged comparison: ${Object.keys(audio).length} clips, ${(Buffer.byteLength(result)/1e6).toFixed(2)} MB`);
