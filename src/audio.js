@@ -1,6 +1,6 @@
 export const NOTE_DURATION=.8;
 export const NOTE_GAP=.05;
-export const RELEASE_TAIL=.25;
+export const RELEASE_TAIL=.35;
 export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+RELEASE_TAIL+.05)*1000);
 let context;
 const buffers=new Map();
