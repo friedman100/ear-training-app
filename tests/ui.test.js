@@ -131,3 +131,43 @@ test('empty summary avoids misleading percentages and new unlocks survive into s
  assert.deepEqual(JSON.parse(unlocked.localStorage.getItem('ear-training-session-v1')).unlocked,[]);
  await unlocked.happyDOM.close();
 });
+
+test('guided and free sessions show identical completed-question summaries and bottom finish control',async()=>{
+ const {initialState}=await import('../src/logic.js');
+ for(const mode of ['guided','free']){
+ const state=initialState();state.mode=mode;
+ const w=setup(JSON.stringify(state)),d=w.document;
+ const button=d.querySelector('#end-session'),answers=d.querySelector('.answers');
+ assert.ok(button.closest('.practice-end'));
+ assert.ok(answers.compareDocumentPosition(button)&4);
+ assert.equal(d.querySelector('.card-top #end-session'),null);
+ for(let i=0;i<4;i++){
+ if(i===0)d.querySelector('#listen').click();else d.querySelector('#next').click();
+ await flush();
+ const id=JSON.parse(w.localStorage.getItem('ear-training-session-v1')).current.q.interval;
+ if(i===1){d.querySelector(`[data-answer="${id===5?7:5}"]`).click();d.querySelector('#listen').click();await flush();}
+ d.querySelector(`[data-answer="${id}"]`).click();
+ }
+ const before=stored(w);d.querySelector('#end-session').click();
+ const session=JSON.parse(w.localStorage.getItem('ear-training-session-v1'));
+ assert.equal(session.total,4);assert.equal(session.correct,3);assert.equal(session.best,2);
+ assert.ok(d.querySelector('.summary-stats').textContent.includes('75%'));
+ assert.equal(d.querySelectorAll('tbody tr').length,Object.keys(session.intervals).length);
+ assert.equal(d.querySelector('.empty-summary'),null);
+ assert.deepEqual(stored(w),before);
+ await w.happyDOM.close();
+ }
+});
+test('recovers a completed guided question from an empty older session without touching progression',async()=>{
+ const {initialState}=await import('../src/logic.js');const {newSession}=await import('../src/session.js');
+ const state=initialState();state.stage=2;state.range='middle';
+ const session=newSession();session.ended=true;session.current={mode:'guided',range:'middle',wrong:[],q:{interval:5,start:60,end:65,attempts:2,solved:true}};
+ const saved=JSON.stringify(state),w=setup(saved,false,JSON.stringify(session));
+ assert.equal(w.localStorage.getItem('ear-training-v1'),saved);
+ const recovered=JSON.parse(w.localStorage.getItem('ear-training-session-v1'));
+ assert.equal(recovered.total,1);assert.equal(recovered.correct,0);
+ assert.ok(w.document.querySelector('tbody').textContent.includes('0 מתוך 1'));
+ const again=setup(saved,false,JSON.stringify(recovered));
+ assert.equal(JSON.parse(again.localStorage.getItem('ear-training-session-v1')).total,1);
+ await w.happyDOM.close();await again.happyDOM.close();
+});
