@@ -52,3 +52,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .practice-actions{flex-direction:row-reverse}
 
 #next{display:inline-flex;direction:rtl;align-items:center;justify-content:center;gap:9px}
+
+.piano-credit{text-align:center;font-size:10px;color:#86927f;margin:0 16px 20px}.piano-credit a{color:inherit}

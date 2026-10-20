@@ -21,7 +21,7 @@ test('sampled piano is softened on initial and repeated playback with no note ov
  for(const envelope of envelopes.slice(-2)){
  assert.equal(envelope[0].v,0);
  assert.ok(envelope[1].t>envelope[0].t&&envelope[1].t-envelope[0].t<.03);
- assert.ok(envelope[1].v<.8&&envelope[1].v>.4);
+ assert.equal(envelope[1].v,1); // Samples carry the audition's calibrated level.
  assert.equal(envelope.at(-1).v,0);
  assert.ok(envelope.at(-1).t-envelope.at(-2).t>=.29);
  }

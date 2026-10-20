@@ -25,8 +25,8 @@ export async function play(start,end,onPlaybackChange=()=>{}){
  source.buffer=buffers.get(midi);source.connect(gain);gain.connect(context.destination);
  // Preserve the recorded piano's natural decay; soften its attack and release.
  gain.gain.setValueAtTime(0,t);
- gain.gain.linearRampToValueAtTime(.65,t+.015);
- gain.gain.setValueAtTime(.65,t+NOTE_DURATION-.3);
+ gain.gain.linearRampToValueAtTime(1,t+.015);
+ gain.gain.setValueAtTime(1,t+NOTE_DURATION-.3);
  gain.gain.linearRampToValueAtTime(0,t+NOTE_DURATION);
  if(i===1)source.onended=()=>{if(request===generation)onPlaybackChange(false);};
  source.start(t);source.stop(t+NOTE_DURATION);sources.push(source);
