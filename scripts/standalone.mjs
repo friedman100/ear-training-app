@@ -7,6 +7,6 @@ const js=await readFile('dist/assets/'+assets.find(f=>f.endsWith('.js')),'utf8')
 const css=await readFile('dist/assets/'+assets.find(f=>f.endsWith('.css')),'utf8');
 const audio={};
 for(let n=48;n<=96;n++)audio[n]=(await readFile(`public/audio/${n}.mp3`)).toString('base64');
-const html=index.replace(/<script[^>]*src="[^"]*"[^>]*><\/script>/,'').replace(/<link[^>]*rel="stylesheet"[^>]*>/,'').replace('</head>',`<style>${css}</style></head>`).replace('</body>',`<script>window.PIANO_SAMPLES=${JSON.stringify(audio)};</script><script type="module">${js.replaceAll('</script','<\\/script')}</script></body>`);
+const html=index.replace(/<script[^>]*src="[^"]*"[^>]*><\/script>/,'').replace(/<link[^>]*rel="stylesheet"[^>]*>/,'').replace('</head>',()=>`<style>${css}</style></head>`).replace('</body>',()=>`<script>window.PIANO_SAMPLES=${JSON.stringify(audio)};</script><script type="module">${js.replaceAll('</script','<\\/script')}</script></body>`);
 await mkdir(dir,{recursive:true});await writeFile(path.join(dir,'ear-training.html'),html);
 console.log('Standalone application created');

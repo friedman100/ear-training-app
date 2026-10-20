@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,readdir} from 'node:fs/promises';
+import {Window} from 'happy-dom';
+import {initialState} from '../src/logic.js';
+const html=await readFile('dist/ear-training.html','utf8');
+const scripts=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+test('downloaded HTML preserves executable bundle and all piano samples',async()=>{
+ assert.equal(scripts.length,2);
+ scripts.forEach(source=>assert.doesNotThrow(()=>new Function(source)));
+ const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js'));
+ assert.equal(scripts[1],(await readFile('dist/assets/'+asset,'utf8')).replaceAll('</script','<\\/script'));
+ assert.ok(!/<script[^>]+src=/.test(html));
+});
+test('downloaded HTML boots from a file URL and supports range change and playback',async()=>{
+ const w=new Window({url:'file:///Downloads/ear-training.html'});
+ w.document.write(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,''));
+ w.structuredClone=structuredClone;
+ const saved=initialState();saved.range='low';
+ w.localStorage.setItem('ear-training-v1',JSON.stringify(saved));
+ let played=0;
+ w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(buffer){assert.ok(buffer.byteLength>1000);return Promise.resolve({});}createBufferSource(){return {connect(){},start(){played++;},stop(){}};}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
+ w.fetch=async url=>{assert.ok(url.startsWith('data:audio/mpeg;base64,'));return {ok:true,arrayBuffer:async()=>Uint8Array.from(Buffer.from(url.split(',')[1],'base64')).buffer};};
+ w.setTimeout=fn=>{queueMicrotask(fn);return 1;};
+ scripts.forEach(source=>w.eval(source));
+ assert.ok(w.document.querySelector('#listen'));
+ assert.equal(Object.keys(w.PIANO_SAMPLES).length,49);
+ assert.equal(w.document.querySelector('.quick-range [aria-pressed="true"]').dataset.range,'low');
+ w.document.querySelector('.quick-range [data-range="high"]').click();
+ assert.equal(w.document.querySelector('.quick-range [aria-pressed="true"]').dataset.range,'high');
+ w.document.querySelector('#listen').click();
+ for(let i=0;i<80;i++)await Promise.resolve();
+ assert.equal(played,2);
+ assert.ok(!w.document.querySelector('[data-answer]').disabled);
+ await w.happyDOM.close();
+});
