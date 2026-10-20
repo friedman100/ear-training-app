@@ -54,3 +54,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 #next{display:inline-flex;direction:rtl;align-items:center;justify-content:center;gap:9px}
 
 .piano-credit{text-align:center;font-size:10px;color:#86927f;margin:0 16px 20px}.piano-credit a{color:inherit}
+
+.session-counter{display:flex;justify-content:center;align-items:center;gap:17px;margin:18px auto 8px;padding:9px 16px;width:fit-content;max-width:100%;border:1px solid #dfe7d8;background:#f4f7ef;border-radius:11px;color:#41603d;font-size:13px}.session-counter strong{font-weight:600}.session-counter small{display:block;font-size:10px;color:#798971}.counter-streak{border-inline-start:1px solid #d5dfcc;padding-inline-start:17px;white-space:nowrap}

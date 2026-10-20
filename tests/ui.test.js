@@ -189,3 +189,22 @@ test('answers unlock at the second note while the release continues',async()=>{
  w.audioSources.at(-1).onended();w.audioTimers.find(t=>t.ms===PLAYBACK_DURATION_MS).fn();await flush();
  assert.ok(d.querySelector('#next'));await w.happyDOM.close();
 });
+
+test('live session counter shows completed first-attempt successes and resets for new practice',async()=>{
+ const w=setup(),d=w.document;
+ assert.ok(d.querySelector('.session-counter').textContent.includes('0 מתוך 0 נכונים'));
+ d.querySelector('#listen').click();await flush();
+ const id=JSON.parse(w.localStorage.getItem('ear-training-session-v1')).current.q.interval;
+ d.querySelector(`[data-answer="${id===5?7:5}"]`).click();
+ assert.ok(d.querySelector('.session-counter').textContent.includes('0 מתוך 0 נכונים'));
+ d.querySelector(`[data-answer="${id}"]`).click();
+ assert.ok(d.querySelector('.session-counter').textContent.includes('0 מתוך 1 נכונים'));
+ d.querySelector('#next').click();await flush();
+ const nextId=JSON.parse(w.localStorage.getItem('ear-training-session-v1')).current.q.interval;
+ d.querySelector(`[data-answer="${nextId}"]`).click();
+ assert.ok(d.querySelector('.session-counter').textContent.includes('1 מתוך 2 נכונים'));
+ assert.ok(d.querySelector('.counter-streak').textContent.includes('1'));
+ d.querySelector('#end-session').click();d.querySelector('#new-session').click();
+ assert.ok(d.querySelector('.session-counter').textContent.includes('0 מתוך 0 נכונים'));
+ await w.happyDOM.close();
+});
