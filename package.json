@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node tests/logic.test.js",
+    "test": "node tests/logic.test.js && node tests/session.test.js",
     "standalone": "npm run build && node scripts/standalone.mjs",
     "test:ui": "npm run build && node tests/ui.test.js",
     "test:standalone": "npm run standalone && node tests/standalone.test.js"

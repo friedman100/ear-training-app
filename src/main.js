@@ -1,15 +1,19 @@
 import './style.css';
-import {ENGLISH_INTERVALS,INTERVALS,STAGES,windowSize,initialState,question,answer,record,load} from './logic.js';
+import {RANGES,ENGLISH_INTERVALS,INTERVALS,STAGES,windowSize,initialState,question,answer,record,load} from './logic.js';
+import {SESSION_KEY,newSession,completeQuestion,noteUnlocks,loadSession,restoreQuestion} from './session.js';
 import {play,stop} from './audio.js';
 let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw new Error('Storage unavailable');}};}
 let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='',settings=false,token=0;
+let session=loadSession(storage);
 const app=document.querySelector('#app');
 const active=()=>state.mode==='guided'?STAGES[state.stage]:state.selected;
-function save(){try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
-function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);render();}
+function saveSession(){session.current={q,mode:state.mode,range:state.range,wrong};try{storage.setItem(SESSION_KEY,JSON.stringify(session));}catch{notice='לא ניתן לשמור את התרגול בדפדפן הזה.';}}
+function save(){saveSession();try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
+function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);saveSession();render();}
 async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}});if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
+ if(session.ended){renderSummary();return;}
  const stats=state.stats[state.mode], pct=stats.total?Math.round(100*stats.correct/stats.total):0;
  const n=windowSize(state.stage),target=Math.ceil(n*.8),correctCount=state.history.filter(h=>h.correct).length;
  const progressValue=Math.min(correctCount,target),stagePct=100*progressValue/target;
@@ -19,7 +23,7 @@ function render(){
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>אוזן מוזיקלית<small>האקדמיה לגיטרה</small></span></a>${button('settings','⚙ <span>הגדרות</span>','quiet')}</header>
  <main><div class="intro"><span class="eyebrow">מקשיבים. מזהים. מתקדמים.</span><h1>כל מרווח מתחיל בהקשבה.</h1><p>כמה דקות של תרגול, צעד גדול לאוזן המוזיקלית שלכם.</p></div>
  <nav aria-label="מצב תרגול">${button('guided','מסלול מודרך',state.mode==='guided'?'selected':'')}${button('free','תרגול חופשי',state.mode==='free'?'selected':'')}</nav>
- <div class="layout"><section class="practice panel ${playing?'is-playing':''}"><div class="card-top"><span class="badge">${state.mode==='guided'?`חלק ${state.stage<5?'א׳':'ב׳'} · שלב ${state.stage+1}`:'בקצב שלכם'}</span><span class="muted">פסנתר · מרווח עולה</span></div>
+ <div class="layout"><section class="practice panel ${playing?'is-playing':''}"><div class="card-top"><span class="badge">${state.mode==='guided'?`חלק ${state.stage<5?'א׳':'ב׳'} · שלב ${state.stage+1}`:'בקצב שלכם'}</span><div class="practice-tools"><span class="muted">פסנתר · מרווח עולה</span>${button('end-session','סיום תרגול','end-session')}</div></div>
  ${state.mode==='guided'?`${finished?`<p class="success-text">${state.complete?'המסלול הושלם!':'חלק א׳ הושלם — אפשר לעבור לחלק ב׳.'}</p>`:`<section class="unlock-progress" aria-label="התקדמות למרווח הבא"><h4>${goal}</h4><div class="progress-label"><span>תשובות נכונות בניסיון הראשון</span><b>${correctCount} / ${target}</b></div><div class="track" role="progressbar" aria-label="תשובות נכונות לקראת השלב הבא" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${progressValue}" aria-valuetext="${correctCount} תשובות נכונות מתוך יעד של ${target}"><i style="width:${stagePct}%"></i></div><p class="progress-status" role="status">${correctCount<target?`עוד ${target-correctCount} תשובות נכונות ליעד`:'יעד התשובות הנכונות הושג ✓'}${state.history.length<n?` · נותרו ${n-state.history.length} שאלות להשלמת החלון`:''}${!covered?' · נדרש כיסוי של כל המרווחים הפעילים':''}</p><p class="fine">${state.history.length} מתוך ${n} שאלות בחלון. נדרשים 80% הצלחה בניסיון הראשון ולפחות שתי שאלות בכל מרווח. הבר משקף את החלון האחרון ועשוי לרדת כשתשובות ישנות יוצאות ממנו.</p></section>`}`:''}
  <div class="sound-art" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
  <h2>איזה מרווח שמעתם?</h2><p class="muted">הקשיבו לשני הצלילים ובחרו את המרווח ביניהם.</p>
@@ -40,11 +44,13 @@ function render(){
 }
 function bind(){
  const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
+ on('end-session',()=>{token++;stop();busy=false;playing=false;settings=false;session.ended=true;saveSession();render();});
  on('listen',()=>listen());on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
  ['guided','free'].forEach(mode=>on(mode,()=>{state.mode=mode;save();next();}));
  document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{
  const id=Number(b.dataset.answer);const result=answer(q,id);if(result.ignored||!heard||busy)return;
- if(result.first)state=record(state,q,result.correct);
+ if(result.first){const previous=state.stage;state=record(state,q,result.correct);if(state.mode==='guided'&&state.stage>previous)session=noteUnlocks(session,STAGES[state.stage].filter(id=>!STAGES[previous].includes(id)));}
+ if(result.q.solved)session=completeQuestion(session,result.q);
  q=result.q;if(!result.correct&&!wrong.includes(id))wrong.push(id);save();render();
  });
  const rangeSelect=document.getElementById('piano-range');if(rangeSelect)rangeSelect.value=state.range;if(rangeSelect)rangeSelect.onchange=()=>{if(state.range===rangeSelect.value)return;state.range=rangeSelect.value;save();next();};
@@ -55,6 +61,17 @@ function bind(){
  });
  on('demo',()=>{const start={low:48,middle:60,high:72}[state.range];listen(start,start+state.pending);});
  on('continue',()=>{state.pending=null;save();render();});
- on('partB',()=>{state.stage=5;state.history=[];state.pending=6;save();next();});
+ on('partB',()=>{session=noteUnlocks(session,[6]);state.stage=5;state.history=[];state.pending=6;save();next();});
 }
-next();
+q=restoreQuestion(session.current,active(),state.range,state.mode,RANGES[state.range]);
+if(session.ended)render();
+else if(q){wrong=Array.isArray(session.current.wrong)?session.current.wrong.filter(id=>active().includes(id)):[];render();}
+else next();
+
+function renderSummary(){
+ const pct=session.total?Math.round(100*session.correct/session.total):0;
+ app.innerHTML=`<header><span class="brand"><span class="brand-icon">♫</span><span>אוזן מוזיקלית<small>האקדמיה לגיטרה</small></span></span></header><main class="summary"><span class="eyebrow">זמן להסתכל על ההתקדמות</span><h1>סיכום התרגול שלכם</h1><p>הנתונים מתייחסים לתרגול הנוכחי בלבד, במסלול המודרך ובמצב החופשי.</p>
+ ${session.total?`<section class="stats summary-stats" aria-label="סיכום התרגול"><div><strong>${session.total}</strong><span>מרווחים שהשלמתם</span></div><div><strong>${pct}<small>%</small></strong><span>הצלחה בניסיון הראשון</span></div><div><strong>${session.best}</strong><span>רצף ההצלחות המרבי בניסיון הראשון</span></div></section><section class="panel summary-details"><h2>ההצלחה שלכם בכל מרווח</h2><div class="summary-table"><table><thead><tr><th scope="col">מרווח</th><th scope="col">הצלחה בניסיון הראשון</th><th scope="col">הצלחות מתוך שאלות</th></tr></thead><tbody>${Object.entries(session.intervals).sort(([a],[b])=>a-b).map(([id,row])=>`<tr><th scope="row">${INTERVALS[id]}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></th><td>${Math.round(100*row.correct/row.total)}%</td><td>${row.correct} מתוך ${row.total}</td></tr>`).join('')}</tbody></table></div></section>`:`<section class="panel empty-summary" role="status"><h2>עדיין לא השלמתם שאלה בתרגול הזה</h2><p>שאלה נספרת רק אחרי שמזהים נכון את המרווח, גם אם נדרשו כמה ניסיונות. אפשר להתחיל תרגול חדש כשנוח לכם.</p></section>`}
+ <section class="panel summary-unlocks"><h2>מרווחים חדשים שנפתחו</h2>${session.unlocked.length?`<ul>${session.unlocked.map(id=>`<li>${INTERVALS[id]} <span class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</span></li>`).join('')}</ul>`:'<p>לא נפתחו מרווחים חדשים במסלול המודרך במהלך התרגול הזה.</p>'}</section><p class="fine">שאלות שלא הושלמו אינן נכללות בסיכום. ההתקדמות במסלול וההגדרות שלכם שמורות.</p>${button('new-session','תרגול חדש','next')} ${notice?`<p role="alert">${notice}</p>`:''}</main>`;
+ document.getElementById('new-session').onclick=()=>{session=newSession();next();};
+}

@@ -4,8 +4,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js'));
 const source=await readFile('dist/assets/'+asset,'utf8');
-function setup(saved,controlled=false){
+function setup(saved,controlled=false,sessionSaved){
  const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';
+ if(sessionSaved)w.localStorage.setItem('ear-training-session-v1',sessionSaved);
  if(saved)w.localStorage.setItem('ear-training-v1',saved);
  w.structuredClone=structuredClone;w.playedNotes=0;w.audioSources=[];w.audioTimers=[];
  w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(){w.playedNotes++;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
@@ -83,4 +84,50 @@ test('free answer buttons retain ascending semitone order between questions',asy
  assert.deepEqual(ids(),Array.from({length:12},(_,i)=>i+1));
  assert.equal(JSON.parse(w.localStorage.getItem('ear-training-v1')).stats.guided.total,0);
  await w.happyDOM.close();
+});
+
+test('session summary counts solved questions once, excludes retries and restores unfinished attempts after refresh',async()=>{
+ const w=setup(),d=w.document;
+ const session=win=>JSON.parse(win.localStorage.getItem('ear-training-session-v1'));
+ d.querySelector('#listen').click();await flush();d.querySelector('#listen').click();await flush();
+ const correctId=session(w).current.q.interval,wrongId=correctId===5?7:5;
+ d.querySelector(`[data-answer="${wrongId}"]`).click();
+ assert.equal(session(w).total,0);
+ const reloaded=setup(w.localStorage.getItem('ear-training-v1'),false,w.localStorage.getItem('ear-training-session-v1'));
+ const r=reloaded.document;
+ assert.equal(session(reloaded).current.q.attempts,1);
+ r.querySelector('#listen').click();await flush();r.querySelector(`[data-answer="${correctId}"]`).click();
+ assert.equal(session(reloaded).total,1);assert.equal(session(reloaded).correct,0);
+ r.querySelector(`[data-answer="${correctId}"]`).click();assert.equal(session(reloaded).total,1);
+ r.querySelector('#next').click();await flush();
+ r.querySelector(`[data-answer="${session(reloaded).current.q.interval}"]`).click();
+ assert.equal(session(reloaded).total,2);assert.equal(session(reloaded).correct,1);assert.equal(session(reloaded).best,1);
+ r.querySelector('#next').click();await flush();
+ const pending=session(reloaded).current.q.interval;
+ r.querySelector(`[data-answer="${pending===5?7:5}"]`).click();
+ const progress=reloaded.localStorage.getItem('ear-training-v1');
+ r.querySelector('#end-session').click();assert.equal(session(reloaded).total,2);
+ assert.ok(r.querySelector('.summary-stats').textContent.includes('50%'));
+ assert.equal(r.querySelectorAll('tbody tr').length,2);
+ const summaryReload=setup(progress,false,reloaded.localStorage.getItem('ear-training-session-v1'));
+ assert.ok(summaryReload.document.querySelector('.summary'));assert.equal(summaryReload.document.querySelector('#listen'),null);
+ summaryReload.document.querySelector('#new-session').click();
+ assert.equal(session(summaryReload).total,0);assert.equal(session(summaryReload).ended,false);
+ assert.equal(summaryReload.localStorage.getItem('ear-training-v1'),progress);
+ assert.ok(summaryReload.document.querySelector('#listen'));
+ for(const win of [w,reloaded,summaryReload])await win.happyDOM.close();
+});
+test('empty summary avoids misleading percentages and new unlocks survive into summary',async()=>{
+ const w=setup();w.document.querySelector('#end-session').click();assert.ok(w.document.querySelector('.empty-summary'));assert.equal(w.document.querySelector('.summary-stats'),null);await w.happyDOM.close();
+ const {initialState}=await import('../src/logic.js');const s=initialState();s.history=Array.from({length:19},(_,i)=>({interval:i%2?5:7,correct:true}));s.range='high';
+ const unlocked=setup(JSON.stringify(s)),d=unlocked.document;
+ d.querySelector('#listen').click();await flush();
+ const q=JSON.parse(unlocked.localStorage.getItem('ear-training-session-v1')).current.q;
+ d.querySelector(`[data-answer="${q.interval}"]`).click();assert.ok(d.querySelector('#continue'));
+ d.querySelector('#continue').click();d.querySelector('#end-session').click();
+ assert.ok(d.querySelector('.summary-unlocks').textContent.includes('טרצה גדולה'));
+ d.querySelector('#new-session').click();
+ const after=stored(unlocked);assert.equal(after.stage,1);assert.equal(after.range,'high');assert.deepEqual(after.selected,[5,7]);
+ assert.deepEqual(JSON.parse(unlocked.localStorage.getItem('ear-training-session-v1')).unlocked,[]);
+ await unlocked.happyDOM.close();
 });

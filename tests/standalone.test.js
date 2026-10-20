@@ -32,5 +32,14 @@ test('downloaded HTML boots from a file URL and supports range change and playba
  for(let i=0;i<80;i++)await Promise.resolve();
  assert.equal(played,2);
  assert.ok(!w.document.querySelector('[data-answer]').disabled);
+ const current=JSON.parse(w.localStorage.getItem('ear-training-session-v1')).current.q;
+ w.document.querySelector(`[data-answer="${current.interval}"]`).click();
+ w.document.querySelector('#end-session').click();
+ assert.ok(w.document.querySelector('.summary'));
+ assert.ok(w.document.querySelector('.summary-stats').textContent.includes('100%'));
+ w.document.querySelector('#new-session').click();
+ assert.ok(w.document.querySelector('#listen'));
+ assert.equal(w.document.querySelector('#piano-range').value,'high');
+ assert.equal(JSON.parse(w.localStorage.getItem('ear-training-session-v1')).total,0);
  await w.happyDOM.close();
 });
