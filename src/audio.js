@@ -1,6 +1,7 @@
 export const NOTE_DURATION=.8;
 export const NOTE_GAP=.05;
-export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+.05)*1000);
+export const RELEASE_TAIL=.25;
+export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+RELEASE_TAIL+.05)*1000);
 let context;
 const buffers=new Map();
 let sources=[];
@@ -27,9 +28,10 @@ export async function play(start,end,onPlaybackChange=()=>{}){
  gain.gain.setValueAtTime(0,t);
  gain.gain.linearRampToValueAtTime(1,t+.015);
  gain.gain.setValueAtTime(1,t+NOTE_DURATION-.3);
- gain.gain.linearRampToValueAtTime(0,t+NOTE_DURATION);
+ gain.gain.linearRampToValueAtTime(.18,t+NOTE_DURATION);
+ gain.gain.linearRampToValueAtTime(0,t+NOTE_DURATION+RELEASE_TAIL);
  if(i===1)source.onended=()=>{if(request===generation)onPlaybackChange(false);};
- source.start(t);source.stop(t+NOTE_DURATION);sources.push(source);
+ source.start(t);source.stop(t+NOTE_DURATION+RELEASE_TAIL);sources.push(source);
  });
  setTimeout(()=>{if(request===generation)onPlaybackChange(true);},30);
  await new Promise(resolve=>setTimeout(resolve,PLAYBACK_DURATION_MS));

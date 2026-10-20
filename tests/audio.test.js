@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {play,NOTE_DURATION,NOTE_GAP,PLAYBACK_DURATION_MS} from '../src/audio.js';
-test('sampled piano is softened on initial and repeated playback with no note overlap',async()=>{
+import {play,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
+test('sampled piano is softened on initial and repeated playback with a gentle overlapping release',async()=>{
  const original={AudioContext:globalThis.AudioContext,window:globalThis.window,fetch:globalThis.fetch,setTimeout:globalThis.setTimeout};
  const notes=[],envelopes=[],delays=[];
  globalThis.window={PIANO_SAMPLES:{60:'sample',67:'sample',72:'sample',76:'sample'}};
@@ -16,14 +16,17 @@ test('sampled piano is softened on initial and repeated playback with no note ov
  for(const pair of [[60,67],[60,67],[72,76]]){
  await play(...pair);
  const [first,second]=notes.slice(-2);
- assert.ok(Math.abs(first.stopTime-first.startTime-NOTE_DURATION)<1e-9);
- assert.ok(Math.abs(second.startTime-first.stopTime-NOTE_GAP)<1e-9);
+ assert.ok(Math.abs(first.stopTime-first.startTime-NOTE_DURATION-RELEASE_TAIL)<1e-9);
+ assert.ok(Math.abs(second.startTime-first.startTime-(NOTE_DURATION+NOTE_GAP))<1e-9);
+ assert.ok(Math.abs(first.stopTime-second.startTime-(RELEASE_TAIL-NOTE_GAP))<1e-9);
+ assert.ok(first.stopTime>second.startTime);
  for(const envelope of envelopes.slice(-2)){
  assert.equal(envelope[0].v,0);
  assert.ok(envelope[1].t>envelope[0].t&&envelope[1].t-envelope[0].t<.03);
  assert.equal(envelope[1].v,1); // Samples carry the audition's calibrated level.
  assert.equal(envelope.at(-1).v,0);
- assert.ok(envelope.at(-1).t-envelope.at(-2).t>=.29);
+ assert.equal(envelope.at(-2).v,.18);
+ assert.ok(Math.abs(envelope.at(-1).t-envelope.at(-2).t-RELEASE_TAIL)<1e-9);
  }
  assert.ok(10+PLAYBACK_DURATION_MS/1000>=second.stopTime);
  }
