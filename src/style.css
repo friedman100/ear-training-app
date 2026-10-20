@@ -14,3 +14,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .range-setting{flex-wrap:wrap;gap:8px}.range-setting #range-position{font-size:11px;white-space:nowrap;color:#647958}.range-setting select{min-width:76px}
 
 .interval-english{display:block;font-size:13px;font-weight:600;line-height:1.5;margin-top:4px;opacity:1;color:inherit}.step{min-height:47px}.step .interval-english{font-size:11px}.step:not(:last-child):after{height:25px}.answer .interval-english{font-size:14px}.choices .interval-english{text-align:right}
+
+.answers{direction:ltr}.answers .answer{direction:rtl}
