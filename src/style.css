@@ -16,3 +16,31 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .interval-english{display:block;font-size:13px;font-weight:600;line-height:1.5;margin-top:4px;opacity:1;color:inherit}.step{min-height:47px}.step .interval-english{font-size:11px}.step:not(:last-child):after{height:25px}.answer .interval-english{font-size:14px}.choices .interval-english{text-align:right}
 
 .answers{direction:ltr}.answers .answer{direction:rtl}
+
+/* Desktop refinements keep the existing phone layout intact. */
+@media(min-width:761px){
+ .layout{grid-template-columns:280px minmax(0,1fr);gap:24px}
+ .practice{min-height:460px;padding:24px 30px}
+ .sound-art{height:78px;margin-top:10px}
+ .sound-art span{transform:scaleY(.88)}
+ .practice h2{margin:2px 0 4px}
+ .practice-actions{margin:16px auto 7px}
+ .answers{margin-top:20px;gap:10px}
+ .answer{color:#263f34;border-color:#a8b8a8;background:#fcfdf9;font-weight:600;padding:13px 12px}
+ .answer:disabled:not(.correct):not(.wrong){opacity:1;color:#526354;border-color:#bbc7b8;background:#f7f9f3}
+ .answer:hover:not(:disabled):not(.correct):not(.wrong){background:#edf3e5;border-color:#6c8b6c;box-shadow:0 2px 7px #284a3510;transform:translateY(-1px)}
+ .answer.correct{color:#236b33;border-color:#7db98a;background:#e2f4e4}
+ .answer.wrong{color:#b13c37;border-color:#d6a09c;background:#fce9e7}
+ .progress{padding:19px 17px;background:#fcfdf9;box-shadow:none;border-color:#e3e7df}
+ .choices{gap:4px;margin-top:15px}
+ .choices label{padding:5px 3px;font-size:12px}
+ .progress .section-title h3{font-size:15px}
+ .step{gap:8px}.step-number{flex-shrink:0}
+ .unlock-progress{margin-top:18px;padding:17px 20px 12px}
+ .is-playing .sound-art span{animation:playing-wave .65s ease-in-out infinite alternate;background:#3c7550}
+ .is-playing .sound-art span:nth-child(2n){animation-delay:-.25s}
+ .is-playing .sound-art span:nth-child(3n){animation-delay:-.45s}
+ .is-playing #listen{background:#32644b;box-shadow:0 0 0 4px #85a96a22}
+}
+@keyframes playing-wave{from{transform:scaleY(.55)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.is-playing .sound-art span{animation:none;background:#3c7550}}

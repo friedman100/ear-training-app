@@ -2,12 +2,12 @@ import './style.css';
 import {ENGLISH_INTERVALS,INTERVALS,STAGES,windowSize,initialState,question,answer,record,load} from './logic.js';
 import {play,stop} from './audio.js';
 let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw new Error('Storage unavailable');}};}
-let state=load(storage),q,heard=false,busy=false,wrong=[],notice='',settings=false,token=0;
+let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='',settings=false,token=0;
 const app=document.querySelector('#app');
 const active=()=>state.mode==='guided'?STAGES[state.stage]:state.selected;
 function save(){try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
-function next(){token++;stop();busy=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);render();}
-async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;render();}}}
+function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);render();}
+async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}});if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
  const stats=state.stats[state.mode], pct=stats.total?Math.round(100*stats.correct/stats.total):0;
@@ -19,11 +19,11 @@ function render(){
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>אוזן מוזיקלית<small>האקדמיה לגיטרה</small></span></a>${button('settings','⚙ <span>הגדרות</span>','quiet')}</header>
  <main><div class="intro"><span class="eyebrow">מקשיבים. מזהים. מתקדמים.</span><h1>כל מרווח מתחיל בהקשבה.</h1><p>כמה דקות של תרגול, צעד גדול לאוזן המוזיקלית שלכם.</p></div>
  <nav aria-label="מצב תרגול">${button('guided','מסלול מודרך',state.mode==='guided'?'selected':'')}${button('free','תרגול חופשי',state.mode==='free'?'selected':'')}</nav>
- <div class="layout"><section class="practice panel"><div class="card-top"><span class="badge">${state.mode==='guided'?`חלק ${state.stage<5?'א׳':'ב׳'} · שלב ${state.stage+1}`:'בקצב שלכם'}</span><span class="muted">פסנתר · מרווח עולה</span></div>
+ <div class="layout"><section class="practice panel ${playing?'is-playing':''}"><div class="card-top"><span class="badge">${state.mode==='guided'?`חלק ${state.stage<5?'א׳':'ב׳'} · שלב ${state.stage+1}`:'בקצב שלכם'}</span><span class="muted">פסנתר · מרווח עולה</span></div>
  ${state.mode==='guided'?`${finished?`<p class="success-text">${state.complete?'המסלול הושלם!':'חלק א׳ הושלם — אפשר לעבור לחלק ב׳.'}</p>`:`<section class="unlock-progress" aria-label="התקדמות למרווח הבא"><h4>${goal}</h4><div class="progress-label"><span>תשובות נכונות בניסיון הראשון</span><b>${correctCount} / ${target}</b></div><div class="track" role="progressbar" aria-label="תשובות נכונות לקראת השלב הבא" aria-valuemin="0" aria-valuemax="${target}" aria-valuenow="${progressValue}" aria-valuetext="${correctCount} תשובות נכונות מתוך יעד של ${target}"><i style="width:${stagePct}%"></i></div><p class="progress-status" role="status">${correctCount<target?`עוד ${target-correctCount} תשובות נכונות ליעד`:'יעד התשובות הנכונות הושג ✓'}${state.history.length<n?` · נותרו ${n-state.history.length} שאלות להשלמת החלון`:''}${!covered?' · נדרש כיסוי של כל המרווחים הפעילים':''}</p><p class="fine">${state.history.length} מתוך ${n} שאלות בחלון. נדרשים 80% הצלחה בניסיון הראשון ולפחות שתי שאלות בכל מרווח. הבר משקף את החלון האחרון ועשוי לרדת כשתשובות ישנות יוצאות ממנו.</p></section>`}`:''}
  <div class="sound-art" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
  <h2>איזה מרווח שמעתם?</h2><p class="muted">הקשיבו לשני הצלילים ובחרו את המרווח ביניהם.</p>
- <div class="practice-actions">${button('listen',busy?'◌ &nbsp; משמיע…':heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','המרווח הבא ←','next'):''}</div>
+ <div class="practice-actions">${button('listen',busy?(playing?'◌ &nbsp; משמיע…':'◌ &nbsp; מכין צלילים…'):heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','המרווח הבא ←','next'):''}</div>
  <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div>
 
  <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||busy||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></button>`).join('')}</div>

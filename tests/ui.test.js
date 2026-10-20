@@ -4,13 +4,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js'));
 const source=await readFile('dist/assets/'+asset,'utf8');
-function setup(saved){
+function setup(saved,controlled=false){
  const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';
  if(saved)w.localStorage.setItem('ear-training-v1',saved);
- w.structuredClone=structuredClone;w.playedNotes=0;
- w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){return {connect(){},start(){w.playedNotes++;},stop(){}};}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
+ w.structuredClone=structuredClone;w.playedNotes=0;w.audioSources=[];w.audioTimers=[];
+ w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(){w.playedNotes++;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
- w.setTimeout=fn=>{queueMicrotask(fn);return 1;};
+ w.setTimeout=(fn,ms)=>{if(controlled)w.audioTimers.push({fn,ms});else queueMicrotask(fn);return 1;};
  w.eval(source);return w;
 }
 const flush=async()=>{for(let i=0;i<50;i++)await Promise.resolve();};
@@ -53,5 +53,34 @@ test('guided progress shows first-attempt successes, target and remaining window
  assert.ok(d.querySelector('.progress-status').textContent.includes('עוד 8'));
  assert.ok(d.querySelector('.progress-status').textContent.includes('נותרו 10'));
  d.querySelector('#free').click();assert.equal(d.querySelector('[role="progressbar"]'),null);
+ await w.happyDOM.close();
+});
+
+test('playback feedback follows scheduled start and final note end, and replay remains available',async()=>{
+ const w=setup(undefined,true),d=w.document;
+ d.querySelector('#listen').click();
+ assert.equal(d.querySelector('.is-playing'),null);
+ await flush();
+ assert.equal(d.querySelector('.is-playing'),null);
+ w.audioTimers.find(t=>t.ms===30).fn();
+ assert.ok(d.querySelector('.practice.is-playing'));
+ w.audioSources.at(-1).onended();
+ assert.equal(d.querySelector('.is-playing'),null);
+ w.audioTimers.find(t=>t.ms===1300).fn();await flush();
+ assert.ok(!d.querySelector('[data-answer]').disabled);
+ d.querySelector('#listen').click();await flush();assert.equal(w.playedNotes,4);
+ w.audioTimers.filter(t=>t.ms===1300).at(-1).fn();await flush();
+ await w.happyDOM.close();
+});
+test('free answer buttons retain ascending semitone order between questions',async()=>{
+ const {initialState}=await import('../src/logic.js');const s=initialState();s.mode='free';s.selected=[12,7,1,5,3,2,4,6,8,9,10,11];
+ const w=setup(JSON.stringify(s)),d=w.document;
+ const ids=()=>[...d.querySelectorAll('[data-answer]')].map(b=>Number(b.dataset.answer));
+ assert.deepEqual(ids(),Array.from({length:12},(_,i)=>i+1));
+ d.querySelector('#listen').click();await flush();
+ for(const id of ids()){const b=d.querySelector(`[data-answer="${id}"]`);if(b.disabled)break;b.click();}
+ d.querySelector('#next').click();await flush();
+ assert.deepEqual(ids(),Array.from({length:12},(_,i)=>i+1));
+ assert.equal(JSON.parse(w.localStorage.getItem('ear-training-v1')).stats.guided.total,0);
  await w.happyDOM.close();
 });
