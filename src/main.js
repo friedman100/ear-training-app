@@ -17,7 +17,7 @@ function render(){
  const stats=state.stats[state.mode], pct=stats.total?Math.round(100*stats.correct/stats.total):0;
  const n=windowSize(state.stage),target=Math.ceil(n*.8),correctCount=state.history.filter(h=>h.correct).length;
  const progressValue=Math.min(correctCount,target),stagePct=100*progressValue/target;
- const goal=state.stage===10?'השלמת המסלול':`ברמה הבאה - תצטרף לתרגול גם ${INTERVALS[STAGES[state.stage+1].at(-1)]}`;
+ const goal=state.stage===10?'השלמת המסלול':`ברמה הבאה - ${STAGES[state.stage+1].at(-1)===6?'יצטרף':'תצטרף'} לתרגול גם ${INTERVALS[STAGES[state.stage+1].at(-1)]}`;
  const finished=state.complete || state.partAComplete&&state.stage===4;
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a>${button('settings','⚙ <span>הגדרות</span>','quiet')}</header>
  <main><div class="intro"><h1>לשיר ולזהות מרווחים - זה הבסיס הכי חזק לשמיעה שלכם</h1><p>(גם 80% זה כבר מצב טוב מאוד למיומנות העיקרית שאתם מפתחים פה)</p></div>
