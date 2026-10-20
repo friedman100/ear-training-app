@@ -1,3 +1,4 @@
+export const ENGLISH_INTERVALS = [null,'Minor second','Major second','Minor third','Major third','Perfect fourth','Tritone','Perfect fifth','Minor sixth','Major sixth','Minor seventh','Major seventh','Perfect octave'];
 export const INTERVALS = [null,'סקונדה קטנה','סקונדה גדולה','טרצה קטנה','טרצה גדולה','קוורטה זכה','טריטון','קווינטה זכה','סקסטה קטנה','סקסטה גדולה','ספטימה קטנה','ספטימה גדולה','אוקטבה'];
 export const STAGES = [[5,7],[5,7,4],[5,7,4,3],[5,7,4,3,2],[5,7,4,3,2,1],[5,7,4,3,2,1,6],[5,7,4,3,2,1,6,9],[5,7,4,3,2,1,6,9,8],[5,7,4,3,2,1,6,9,8,11],[5,7,4,3,2,1,6,9,8,11,10],[5,7,4,3,2,1,6,9,8,11,10,12]];
 export const RANGES = {low:[48,72],middle:[60,84],high:[72,96]};

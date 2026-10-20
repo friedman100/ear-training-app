@@ -12,3 +12,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .range-setting{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 3px 12px;color:#758078;font-size:12px}.range-setting select{font:inherit;color:#355442;background:#fff;border:1px solid #dce3d9;border-radius:7px;padding:5px 9px;min-width:94px;cursor:pointer}.range-setting select:focus-visible{outline:3px solid #b7ce83;outline-offset:3px}
 
 .range-setting{flex-wrap:wrap;gap:8px}.range-setting #range-position{font-size:11px;white-space:nowrap;color:#647958}.range-setting select{min-width:76px}
+
+.interval-english{display:block;font-size:11px;font-weight:400;line-height:1.45;margin-top:3px;opacity:.75}.step{min-height:47px}.step .interval-english{font-size:9px}.step:not(:last-child):after{height:25px}.answer .interval-english{font-size:12px}.choices .interval-english{text-align:right}
