@@ -40,3 +40,15 @@ test('free selection, minimum one interval, settings and persisted reload',async
  const reloaded=setup(saved);assert.equal(reloaded.document.querySelector('#free').className,'selected');assert.equal(reloaded.document.querySelectorAll('input:checked').length,1);
  await w.happyDOM.close();await reloaded.happyDOM.close();
 });
+
+test('guided progress shows first-attempt successes, target and remaining window requirements',async()=>{
+ const {initialState}=await import('../src/logic.js');
+ const state=initialState();state.history=Array.from({length:10},(_,i)=>({interval:i%2?5:7,correct:i<8}));
+ const w=setup(JSON.stringify(state)),d=w.document;
+ const bar=d.querySelector('[role="progressbar"]');assert.equal(bar.getAttribute('aria-valuenow'),'8');assert.equal(bar.getAttribute('aria-valuemax'),'16');
+ assert.ok(d.querySelector('.unlock-progress').textContent.includes('טרצה גדולה'));
+ assert.ok(d.querySelector('.progress-status').textContent.includes('עוד 8'));
+ assert.ok(d.querySelector('.progress-status').textContent.includes('נותרו 10'));
+ d.querySelector('#free').click();assert.equal(d.querySelector('[role="progressbar"]'),null);
+ await w.happyDOM.close();
+});

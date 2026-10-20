@@ -6,3 +6,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 
 .practice-actions{display:flex;justify-content:center;align-items:stretch;flex-wrap:wrap;gap:12px;margin:24px auto 8px}.practice-actions .play,.practice-actions .next{margin:0;min-width:0;padding:13px 24px;font-size:16px}
 @media(max-width:760px){.practice-actions{gap:8px}.practice-actions .play,.practice-actions .next{padding:12px 14px;font-size:14px}}
+
+.unlock-progress{border-top:1px solid #e3e8de;padding-top:16px}.unlock-progress h4{font-size:13px;margin:0 0 12px}.unlock-progress .track{height:10px}.unlock-progress .track i{background:#578b58;transition:width .25s ease}.progress-status{font-size:11px;color:#4f7147;margin:9px 0}.unlock-progress .progress-label{gap:8px}.unlock-progress .progress-label b{white-space:nowrap}
