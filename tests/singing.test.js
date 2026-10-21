@@ -1,3 +1,4 @@
+import {PROGRESS_KEY,NATURALS,newProgress,loadProgress,completeTarget,nextTarget} from '../public/singing/progression.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -35,9 +36,10 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
 let bootstrapId=0;
-async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false,production=false,singingSaved}={}){
+async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false,production=false,singingSaved,singingProgress}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
  w.document.write((await readFile(production?'public/singing/index.html':'public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
+ if(singingProgress)w.localStorage.setItem(PROGRESS_KEY,JSON.stringify(singingProgress));
  if(singingSaved)w.localStorage.setItem('ear-training-singing-v1',singingSaved);
  w.localStorage.setItem('ear-training-v1','existing-interval-progress');
  const listeners=new Map();
@@ -197,21 +199,22 @@ test('warmup accepts 400ms accumulated accuracy while retaining the 25-cent boun
  assert.equal(pair.results[0].goodMs,400);assert.equal(pair.results[0].accurate,false);
 });
 
+const finishedSinging={version:1,notes:[48,50,52,53,55,57,51,54,59,49],completed:10,index:9};
 test('production singing shows one exercise, persists chromatic settings and leaves interval progress untouched',async()=>{
- const s=await setup({production:true}),d=s.w.document;
+ const s=await setup({production:true,singingProgress:finishedSinging}),d=s.w.document;
  assert.equal(s.requests,0);assert.equal(s.played.length,0);assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('#timed-exercise').hidden,true);assert.equal(d.querySelector('#warmup-exercise').hidden,true);
  d.querySelector('#target-select').value='49';d.querySelector('#target-select').dispatchEvent(new s.w.Event('change'));assert.match(d.querySelector('#target-name').textContent,/C♯3/);
  d.querySelector('[data-exercise="timed"]').click();assert.equal(d.querySelector('#single-exercise').hidden,true);assert.equal(d.querySelector('#timed-exercise').hidden,false);
  d.querySelector('#timed-direction').value='descending';d.querySelector('#timed-direction').dispatchEvent(new s.w.Event('change'));
  d.querySelector('#timed-root').value='51';d.querySelector('#timed-root').dispatchEvent(new s.w.Event('change'));
  const saved=s.w.localStorage.getItem('ear-training-singing-v1');assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');
- const again=await setup({production:true,singingSaved:saved}),a=again.w.document;
+ const again=await setup({production:true,singingSaved:saved,singingProgress:finishedSinging}),a=again.w.document;
  assert.equal(a.querySelector('#timed-exercise').hidden,false);assert.equal(a.querySelector('#target-select').value,'49');assert.equal(a.querySelector('#timed-root').value,'51');assert.equal(a.querySelector('#timed-direction').value,'descending');assert.equal(again.requests,0);
  a.querySelector('#next-exercise').click();assert.equal(a.querySelector('#warmup-exercise').hidden,false);assert.equal(a.querySelector('#next-exercise').hidden,true);a.querySelector('#previous-exercise').click();assert.equal(a.querySelector('#timed-exercise').hidden,false);
  await s.w.happyDOM.close();await again.w.happyDOM.close();
 });
 test('production exercise changes and exit stop microphone and pending single-note playback',async()=>{
- const s=await setup({production:true}),d=s.w.document;
+ const s=await setup({production:true,singingProgress:finishedSinging}),d=s.w.document;
  d.querySelector('#mic').click();await flush();assert.equal(s.requests,1);
  let release;s.env.fetch=()=>new Promise(resolve=>{release=()=>resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});});
  d.querySelector('#play').click();await flush();d.querySelector('[data-exercise="timed"]').click();release();await flush();assert.equal(s.played.length,0);assert.equal(s.stopped,1);
@@ -223,6 +226,35 @@ test('production exercise changes and exit stop microphone and pending single-no
 });
 test('production safely restores malformed or out-of-range settings without requesting a microphone',async()=>{
  for(const saved of ['broken JSON',JSON.stringify({exercise:'invalid','target-select':99,'timed-root':47,'warmup-root':61,direction:'invalid'})]){
- const s=await setup({production:true,singingSaved:saved}),d=s.w.document;assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('#target-select').value,'48');assert.equal(d.querySelector('#timed-root').value,'48');assert.equal(s.requests,0);await s.w.happyDOM.close();
+ const s=await setup({production:true,singingSaved:saved}),d=s.w.document;assert.equal(d.querySelector('#single-exercise').hidden,false);assert.ok(NATURALS.includes(Number(d.querySelector('#target-select').value)));assert.equal(d.querySelector('#timed-root').value,'48');assert.equal(s.requests,0);await s.w.happyDOM.close();
  }
+});
+
+test('singing curriculum randomizes five naturals then a guaranteed mix, and completion is idempotent',()=>{
+ for(let trial=0;trial<200;trial++){const p=newProgress();assert.equal(p.notes.length,10);assert.ok(p.notes.slice(0,5).every(n=>NATURALS.includes(n)));assert.ok(p.notes.slice(5).some(n=>NATURALS.includes(n)));assert.ok(p.notes.slice(5).some(n=>!NATURALS.includes(n)));}
+ let p=newProgress();assert.equal(nextTarget(p),p);assert.equal(completeTarget(p,-1),p);
+ for(let i=0;i<10;i++){const note=p.notes[p.index];p=completeTarget(p,note);assert.equal(p.completed,i+1);assert.equal(completeTarget(p,note),p);if(i<9)p=nextTarget(p);}
+ assert.equal(p.completed,10);assert.equal(nextTarget(p),p);
+ for(const raw of ['broken',JSON.stringify({...p,completed:11}),JSON.stringify({...p,notes:Array(10).fill(49)})]){const restored=loadProgress({getItem:()=>raw});assert.equal(restored.completed,0);assert.ok(NATURALS.includes(restored.notes[0]));}
+});
+test('guided singing requires listening and ten distinct completed questions, survives retries and refresh, and opens the next stage manually',async()=>{
+ let s=await setup({production:true,singingSaved:JSON.stringify({exercise:'warmup','target-select':49})}),d=s.w.document,time=0;
+ const progress=()=>JSON.parse(s.w.localStorage.getItem(PROGRESS_KEY));
+ assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('[data-exercise="timed"]').disabled,true);assert.equal(d.querySelector('[data-exercise="warmup"]').disabled,true);assert.equal(d.querySelector('#next').disabled,true);assert.equal(d.querySelector('label[for="target-select"]').hidden,true);
+ d.querySelector('[data-exercise="timed"]').click();assert.equal(d.querySelector('#single-exercise').hidden,false);
+ d.querySelector('#mic').click();await flush();s.setSignal(tone(440*2**((progress().notes[0]-69)/12)));for(let i=0;i<20;i++)s.tick(time+=50);assert.equal(progress().completed,0);
+ for(let i=0;i<10;i++){
+  const note=progress().notes[progress().index];if(i<5)assert.ok(NATURALS.includes(note));
+  if(i===0){d.querySelector('#play').click();await flush();} // Other questions are played by the next button.
+  s.finishPiano();s.tick(time+=400);s.setSignal(tone(440*2**((note+1-69)/12)));for(let t=0;t<20;t++)s.tick(time+=50);assert.equal(progress().completed,i);
+  s.setSignal(tone(440*2**((note-69)/12)));for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,i+1);assert.equal(d.querySelector('#singing-progress-bar').getAttribute('aria-valuenow'),String(i+1));
+  if(i===0){d.querySelector('#retry').click();for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,1);d.querySelector('#play').click();await flush();s.finishPiano();s.tick(time+=400);for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,1);}
+  if(i===4){const saved=progress(),preferences=s.w.localStorage.getItem('ear-training-singing-v1');await s.w.happyDOM.close();s=await setup({production:true,singingProgress:saved,singingSaved:preferences});d=s.w.document;time=0;assert.equal(progress().completed,5);assert.equal(d.querySelector('#next').disabled,false);assert.equal(d.querySelector('[data-exercise="timed"]').disabled,true);d.querySelector('#mic').click();await flush();}
+  if(i===1){d.querySelector('#play').click();await flush();}
+  if(i<9){const played=s.played.length;d.querySelector('#next').click();await flush();assert.equal(s.played.length,played+1);assert.equal(progress().index,i+1);assert.equal(d.querySelector('#next').disabled,true);}
+ }
+ assert.equal(d.querySelector('#singing-stage-complete').hidden,false);assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('[data-exercise="timed"]').disabled,false);assert.equal(d.querySelector('#next').hidden,true);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');
+ d.querySelector('#open-two-notes').click();assert.equal(d.querySelector('#timed-exercise').hidden,false);
+ const again=await setup({production:true,singingProgress:progress(),singingSaved:s.w.localStorage.getItem('ear-training-singing-v1')});assert.equal(again.w.document.querySelector('[data-exercise="timed"]').disabled,false);assert.equal(again.w.document.querySelector('#timed-exercise').hidden,false);
+ await s.w.happyDOM.close();await again.w.happyDOM.close();
 });

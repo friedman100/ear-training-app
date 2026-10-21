@@ -2,12 +2,14 @@ import {WARMUP_TIMING} from './timeline.js?v=warmup-hold400-v7';
 import {createTimedPair} from './timed-pair.js?v=warmup-hold400-v7';
 import {detectPitch,createTracker} from './pitch.js?v=warmup-hold400-v7';
 
-export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{}}={}){
+export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false}={}){
  const doc=env.document,$=id=>doc.getElementById(prefix+id);
  const targets=Array.from({length:pair?11:13},(_,i)=>48+i);
  const letters=['C','C♯ / D♭','D','D♯ / E♭','E','F','F♯ / G♭','G','G♯ / A♭','A','A♯ / B♭','B'];
  const hebrew=['דו','דו דיאז / רה במול','רה','רה דיאז / מי במול','מי','פה','פה דיאז / סול במול','סול','סול דיאז / לה במול','לה','לה דיאז / סי במול','סי'];
  const name=n=>[letters[n%12].split(' / ').map(letter=>letter+(Math.floor(n/12)-1)).join(' / '),hebrew[n%12]];
+ let heard=false;
+ const playbackControls=['play','retry',...(!managedTargets?['next','target-select']:[]),...(pair?['direction']:[])];
  let step=0,direction='ascending';
  const sequence=()=>!pair?[target]:direction==='ascending'?[target,target+2]:[target+2,target];
  const current=()=>sequence()[step];
@@ -30,13 +32,14 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  $('meter').setAttribute('aria-valuetext',state);label(state);
  $('hint').textContent=Math.abs(cents)<=25?'אתם באזור הנכון. הישארו על הצליל רגע.':cents>0?'נסו להוריד מעט את הקול.':'נסו להעלות מעט את הקול.';
  $('hold').style.width=`${result.progress*100}%`;
- if(result.success&&!successShown){if(pair&&step===0){step=1;tracker.reset();showTarget();clearReading('מצוין! עכשיו שירו את הצליל השני');return;}successShown=true;$('success').hidden=false;if(pair){$('steps').querySelectorAll('.pair-note').forEach(n=>{n.classList.remove('active');n.classList.add('done');});}}
+ if(result.success&&!successShown){if(pair&&step===0){step=1;tracker.reset();showTarget();clearReading('מצוין! עכשיו שירו את הצליל השני');return;}successShown=true;$('success').hidden=false;onSuccess(current());if(pair){$('steps').querySelectorAll('.pair-note').forEach(n=>{n.classList.remove('active');n.classList.add('done');});}}
  }
  function frame(time){
  if(!micActive)return;
  raf=env.requestAnimationFrame(frame);
  if(time-lastFrame<50)return;lastFrame=time;
  if(playing||time<blockedUntil){clearReading(playing?'הקשיבו לפסנתר…':'עוד רגע — תכף אפשר לשיר');return;}
+ if(requirePlayback&&!heard){clearReading('הקשיבו לצליל לפני שאתם שרים');return;}
  const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);
  paint(tracker.update(detectPitch(data,context.sampleRate),current(),time));
  }
@@ -71,8 +74,8 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  async function playTarget(){
  if(playing)return;
  const request=++playbackId;playing=true;blockedUntil=Infinity;reset();$('error').hidden=true;
- ['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=true);$('play').textContent='משמיע…';clearReading('הקשיבו לפסנתר…');
- const finish=()=>{if(request!==playbackId)return;sources=[];playing=false;blockedUntil=now()+350;tracker.reset();['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה חוזרת';clearReading(micActive?'עוד רגע — תכף אפשר לשיר':pair?'הפעילו מיקרופון ושירו את שני הצלילים':'הפעילו מיקרופון ושירו את הצליל');};
+ playbackControls.forEach(id=>$(id).disabled=true);$('play').textContent='משמיע…';clearReading('הקשיבו לפסנתר…');
+ const finish=()=>{if(request!==playbackId)return;sources=[];playing=false;heard=true;blockedUntil=now()+350;tracker.reset();playbackControls.forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה חוזרת';clearReading(micActive?'עוד רגע — תכף אפשר לשיר':pair?'הפעילו מיקרופון ושירו את שני הצלילים':'הפעילו מיקרופון ושירו את הצליל');};
  try{
  const ctx=audioContext();await ctx.resume();
  const notes=sequence();
@@ -90,13 +93,14 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  $('mic').addEventListener('click',toggleMic);$('play').addEventListener('click',playTarget);
  $('retry').addEventListener('click',()=>{reset();if(micActive)blockedUntil=0;});
  $('target-select').innerHTML=targets.map(n=>`<option value="${n}">${name(n)[0]} · ${name(n)[1]}</option>`).join('');$('target-select').value=String(target);
- $('target-select').addEventListener('change',()=>{target=Number($('target-select').value);reset();});
+ if(!managedTargets)$('target-select').addEventListener('change',()=>{target=Number($('target-select').value);reset();});
  if(pair)$('direction').addEventListener('change',()=>{direction=$('direction').value;reset();});
- $('next').addEventListener('click',()=>{const options=targets.filter(n=>n!==target);target=options[Math.floor(Math.random()*options.length)];$('target-select').value=String(target);$('play').textContent=pair?'▶ האזנה לשני הצלילים':'▶ האזנה לצליל';reset();});
+ if(!managedTargets)$('next').addEventListener('click',()=>{const options=targets.filter(n=>n!==target);target=options[Math.floor(Math.random()*options.length)];$('target-select').value=String(target);$('play').textContent=pair?'▶ האזנה לשני הצלילים':'▶ האזנה לצליל';reset();});
  showTarget();
- function stop(){playbackId++;sources.forEach(source=>{source.onended=null;try{source.stop();}catch{}});sources=[];playing=false;blockedUntil=0;['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה לצליל';stopMic();}
+ function stopPlayback(){playbackId++;sources.forEach(source=>{source.onended=null;try{source.stop();}catch{}});sources=[];playing=false;blockedUntil=0;playbackControls.forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה לצליל';}
+ function stop(){stopPlayback();stopMic();}
  env.addEventListener('pagehide',()=>{stop();context?.close();context=undefined;});
  // No storage, microphone request or sound is started on page load.
- return {stop};
+ return {stop,play:playTarget,setTarget(note){if(!targets.includes(note))return;stopPlayback();heard=false;target=note;$('target-select').value=String(note);reset();}};
 }
 if(typeof window!=='undefined'&&window.document?.getElementById('mic')&&!window.document.documentElement.hasAttribute('data-singing-production')){let single,two,warmup;single=createPrototype(window,{onMicStart:()=>{two?.stop();warmup?.stop();}});if(window.document.getElementById('timed-mic'))two=createTimedPair(window,{onActivate:()=>{single.stop();warmup?.stop();}});if(window.document.getElementById('warmup-mic'))warmup=createTimedPair(window,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING,onActivate:()=>{single.stop();two?.stop();}});}
