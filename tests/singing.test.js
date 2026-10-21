@@ -34,13 +34,13 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.ok(Math.abs(tracker.update(detected(146.83),48,250).cents)<1);
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
-async function setup({secure=true,deny=false,timed=false,warmup=false}={}){
+async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
  w.document.write((await readFile('public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
- let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;
- const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(){},stop(){}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
- if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
- return {w,env,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
+ let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;const played=[];
+ const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(at){played.push({start:at});},stop(at){if(at!==undefined)played.at(-1).stop=at;}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
+ if(bootstrap){globalThis.window=env;try{await import('../public/sing-back/app.js?bootstrap-test');}finally{delete globalThis.window;}}else if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
+ return {w,env,played,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 test('mic activates only by user action; live feedback, octave success, retry and stopping work',async()=>{
@@ -131,21 +131,34 @@ test('new short warmup is appended below existing exercises and scores all four 
  assert.equal(d.querySelectorAll('#warmup-chart rect').length,4);
  assert.ok(d.querySelector('#warmup-note2').textContent.includes('מי'));assert.ok(d.querySelector('#warmup-note3').textContent.includes('רה'));
  d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-start').click();await flush();
- s.tick(14900);assert.ok(d.querySelector('#warmup-phase').textContent.includes('1'));
+ s.tick(15300);assert.ok(d.querySelector('#warmup-phase').textContent.includes('1'));
  const frequencies=[130.8128,146.8324,164.8138,146.8324];
- for(let time=16650;time<31050;time+=50){s.setSignal(tone(frequencies[Math.floor((time-16650)/3600)]));s.tick(time);}
- s.tick(31100);assert.equal(d.querySelector('#warmup-success').hidden,false);
+ for(let time=17050;time<31450;time+=50){s.setSignal(tone(frequencies[Math.floor((time-17050)/3600)]));s.tick(time);}
+ s.tick(31500);assert.equal(d.querySelector('#warmup-success').hidden,false);
  for(let i=0;i<4;i++)assert.ok(d.querySelector('#warmup-result'+i).textContent.includes('מדויק'));
  assert.ok(d.querySelector('#warmup-trace').childElementCount>20);await s.w.happyDOM.close();
 });
 test('short warmup uses its own timing and accuracy threshold without changing the pair exercise',()=>{
  const notes=[48,50,52,50],config={...WARMUP_TIMING};
  assert.equal(config.slotMs,3600);
- assert.equal(timelinePhase(16600+1800,true,{...config,noteCount:4}).step,0);
- assert.equal(timelinePhase(16600+3600,true,{...config,noteCount:4}).step,1);
+ assert.equal(timelinePhase(17000+1800,true,{...config,noteCount:4}).step,0);
+ assert.equal(timelinePhase(17000+3600,true,{...config,noteCount:4}).step,1);
  const round=createTimedRound(notes,config);
- for(let time=16600;time<31000;time+=50){const step=Math.floor((time-16600)/3600);round.update(step===2?null:detected(440*2**((notes[step]-69)/12)),time);}
+ for(let time=17000;time<31400;time+=50){const step=Math.floor((time-17000)/3600);round.update(step===2?null:detected(440*2**((notes[step]-69)/12)),time);}
  assert.equal(round.results.length,4);assert.deepEqual(round.results.map(r=>r.accurate),[true,true,false,true]);
- assert.equal(timelinePhase(31000,true,{...config,noteCount:4}).phase,'done');
+ assert.equal(timelinePhase(31400,true,{...config,noteCount:4}).phase,'done');
  assert.equal(timelinePhase(6400).phase,'sing');
 });
+
+ test('actual page bootstrap schedules slow warmup audio and cursor together',async()=>{
+ const s=await setup({bootstrap:true}),d=s.w.document;
+ d.querySelector('#warmup-demo').click();await flush();
+ assert.equal(s.played.length,4);
+ for(let i=0;i<4;i++){assert.ok(Math.abs(s.played[i].start-(.05+i*3.6))<1e-8);assert.ok(Math.abs(s.played[i].stop-s.played[i].start-4.4)<1e-8);}
+ s.tick(1850);assert.ok(d.querySelector('#warmup-target0').classList.contains('active'));assert.equal(+d.querySelector('#warmup-cursor').getAttribute('x1'),90);
+ s.tick(3650);assert.ok(d.querySelector('#warmup-target1').classList.contains('active'));
+ s.tick(15100);assert.ok(d.querySelector('#warmup-stop').hidden===false);
+ s.tick(15300);assert.equal(d.querySelector('#warmup-stop').hidden,true);
+ assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=slow-warmup-3/);
+ await s.w.happyDOM.close();
+ });

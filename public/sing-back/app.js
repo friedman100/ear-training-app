@@ -1,6 +1,6 @@
-import {WARMUP_TIMING} from './timeline.js';
-import {createTimedPair} from './timed-pair.js';
-import {detectPitch,createTracker} from './pitch.js';
+import {WARMUP_TIMING} from './timeline.js?v=slow-warmup-3';
+import {createTimedPair} from './timed-pair.js?v=slow-warmup-3';
+import {detectPitch,createTracker} from './pitch.js?v=slow-warmup-3';
 
 export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{}}={}){
  const doc=env.document,$=id=>doc.getElementById(prefix+id);

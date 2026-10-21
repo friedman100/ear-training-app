@@ -1,5 +1,5 @@
-import {createTracker,centsFromTarget} from './pitch.js';
-export const WARMUP_TIMING=Object.freeze({slotMs:3600,demoMs:14800,countMs:1800,requiredMs:600});
+import {createTracker,centsFromTarget} from './pitch.js?v=slow-warmup-3';
+export const WARMUP_TIMING=Object.freeze({slotMs:3600,demoMs:15200,countMs:1800,requiredMs:600});
 export const SLOT_MS=1800,DEMO_MS=4000,COUNT_MS=1800;
 export function timelinePhase(elapsed,withSinging=true,{slotMs=SLOT_MS,demoMs=DEMO_MS,countMs=COUNT_MS,noteCount=2}={}){
  if(elapsed<demoMs)return {phase:'listen',step:Math.min(noteCount-1,Math.floor(Math.max(0,elapsed)/slotMs)),position:Math.min(1,Math.max(0,elapsed)/(noteCount*slotMs))};
