@@ -1,3 +1,4 @@
+import {WARMUP_TIMING} from './timeline.js';
 import {createTimedPair} from './timed-pair.js';
 import {detectPitch,createTracker} from './pitch.js';
 
@@ -96,4 +97,4 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  // No storage, microphone request or sound is started on page load.
  return {stop:stopMic};
 }
-if(typeof window!=='undefined'&&window.document?.getElementById('mic')){let single,two,warmup;single=createPrototype(window,{onMicStart:()=>{two?.stop();warmup?.stop();}});if(window.document.getElementById('timed-mic'))two=createTimedPair(window,{onActivate:()=>{single.stop();warmup?.stop();}});if(window.document.getElementById('warmup-mic'))warmup=createTimedPair(window,{prefix:'warmup-',pattern:[0,2,4,2],slotMs:1800,demoMs:7600,countMs:1800,requiredMs:600,onActivate:()=>{single.stop();two?.stop();}});}
+if(typeof window!=='undefined'&&window.document?.getElementById('mic')){let single,two,warmup;single=createPrototype(window,{onMicStart:()=>{two?.stop();warmup?.stop();}});if(window.document.getElementById('timed-mic'))two=createTimedPair(window,{onActivate:()=>{single.stop();warmup?.stop();}});if(window.document.getElementById('warmup-mic'))warmup=createTimedPair(window,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING,onActivate:()=>{single.stop();two?.stop();}});}
