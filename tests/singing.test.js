@@ -343,3 +343,32 @@ test('warmup stages resist legacy selection, partial or stopped singing and pres
  const again=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,warmupProgress:progress(),singingSaved:s.w.localStorage.getItem('ear-training-singing-v1')});assert.equal(again.w.document.querySelector('[data-warmup-step="1"]').getAttribute('aria-current'),'step');assert.equal(again.w.document.querySelector('#next-warmup-pattern').disabled,true);
  assert.equal(JSON.parse(s.w.localStorage.getItem(PROGRESS_KEY)).completed,10);assert.equal(JSON.parse(s.w.localStorage.getItem(PAIR_KEY)).completed,4);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');await s.w.happyDOM.close();await again.w.happyDOM.close();
 });
+
+test('free singing opens every exercise, keeps its own choices and never advances guided progress',async()=>{
+ const single={...finishedSinging,completed:3,index:3},pairs={...finishedPairs,completed:0,index:0},warmups={version:1,completed:1,current:0};
+ const s=await setup({production:true,singingProgress:single,pairProgress:pairs,warmupProgress:warmups}),d=s.w.document;
+ const keys=[PROGRESS_KEY,PAIR_KEY,WARMUP_KEY],before=keys.map(key=>s.w.localStorage.getItem(key));let time=0;
+ d.querySelector('[data-singing-mode="free"]').click();
+ assert.equal(d.querySelector('[data-singing-mode="free"]').getAttribute('aria-pressed'),'true');assert.equal(d.querySelector('[data-exercise="warmup"]').disabled,false);assert.equal(d.querySelector('label[for="target-select"]').hidden,false);assert.ok([...d.querySelectorAll('.singing-progress')].every(p=>p.hidden));
+ d.querySelector('#target-select').value='49';d.querySelector('#target-select').dispatchEvent(new s.w.Event('change'));assert.match(d.querySelector('#target-name').textContent,/C♯3/);
+ d.querySelector('#mic').click();await flush();d.querySelector('#play').click();await flush();s.finishPiano();s.setSignal(tone(440*2**((49-69)/12)));s.tick(time+=400);for(let i=0;i<23;i++)s.tick(time+=50);assert.equal(d.querySelector('#success').hidden,false);
+ d.querySelector('[data-exercise="timed"]').click();assert.equal(d.querySelector('#timed-exercise .timed-options').hidden,false);
+ d.querySelector('#timed-root').value='55';d.querySelector('#timed-root').dispatchEvent(new s.w.Event('change'));d.querySelector('#timed-direction').value='descending';d.querySelector('#timed-direction').dispatchEvent(new s.w.Event('change'));
+ d.querySelector('#timed-mic').click();await flush();d.querySelector('#timed-retry').click();await flush();let start=time+1850;
+ for(let t=start;t<start+3600;t+=50){s.setSignal(tone(440*2**(((t<start+1800?57:55)-69)/12)));s.tick(t);}time=start+3650;s.tick(time);assert.equal(d.querySelector('#timed-success').hidden,false);
+ d.querySelector('[data-exercise="warmup"]').click();assert.ok([...d.querySelectorAll('[data-warmup-step]')].every(b=>!b.disabled));d.querySelector('[data-warmup-step="4"]').click();assert.equal(d.querySelectorAll('#warmup-chart rect').length,7);
+ d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-retry').click();await flush();start=time+1850;const notes=[48,52,50,53,52,55,60];
+ for(let t=start;t<start+10500;t+=50){s.setSignal(tone(440*2**((notes[Math.floor((t-start)/1500)]-69)/12)));s.tick(t);}time=start+10550;s.tick(time);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.ok(!d.querySelector('#warmup-success-detail').textContent.includes('נפתחה'));assert.deepEqual(keys.map(key=>s.w.localStorage.getItem(key)),before);
+ const saved=s.w.localStorage.getItem('ear-training-singing-v1');const again=await setup({production:true,singingProgress:single,pairProgress:pairs,warmupProgress:warmups,singingSaved:saved}),a=again.w.document;
+ assert.equal(a.querySelector('[data-singing-mode="free"]').getAttribute('aria-pressed'),'true');assert.equal(a.querySelector('#warmup-exercise').hidden,false);assert.equal(a.querySelector('[data-warmup-step="4"]').getAttribute('aria-current'),'step');assert.equal(a.querySelector('#target-select').value,'49');assert.equal(a.querySelector('#timed-root').value,'55');assert.equal(a.querySelector('#timed-direction').value,'descending');
+ d.querySelector('[data-singing-mode="guided"]').click();assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('#target-select').value,String(single.notes[single.index]));assert.equal(d.querySelector('[data-exercise="warmup"]').disabled,true);assert.equal(d.querySelector('[data-warmup-step="4"]').disabled,true);assert.equal(d.querySelector('label[for="target-select"]').hidden,true);
+ d.querySelector('[data-singing-mode="free"]').click();assert.equal(d.querySelector('#warmup-exercise').hidden,false);assert.equal(d.querySelector('[data-warmup-step="4"]').getAttribute('aria-current'),'step');assert.deepEqual(keys.map(key=>s.w.localStorage.getItem(key)),before);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');
+ await s.w.happyDOM.close();await again.w.happyDOM.close();
+});
+test('guided warmup success clearly announces the new pattern and places a primary next action inside the success panel',async()=>{
+ const s=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:JSON.stringify({exercise:'warmup'})}),d=s.w.document;
+ d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-retry').click();await flush();const notes=[48,50,52,50];
+ for(let t=1850;t<7850;t+=50){s.setSignal(tone(440*2**((notes[Math.floor((t-1850)/1500)]-69)/12)));s.tick(t);}s.tick(7900);
+ const panel=d.querySelector('#warmup-success'),next=d.querySelector('#next-warmup-pattern');assert.equal(panel.hidden,false);assert.ok(panel.classList.contains('celebrate'));assert.equal(panel.getAttribute('aria-live'),'polite');assert.match(d.querySelector('#warmup-success-title').textContent,/כל הכבוד/);assert.match(d.querySelector('#warmup-success-detail').textContent,/נפתחה לכם התבנית הבאה: דו–רה–מי–סול/);assert.equal(next.parentElement,panel);assert.ok(next.classList.contains('primary'));assert.equal(next.disabled,false);
+ assert.equal(d.querySelector('[data-warmup-step="0"]').getAttribute('aria-current'),'step');assert.equal(d.querySelector('[data-warmup-step="1"]').textContent.includes('נעול'),false);next.click();assert.equal(panel.hidden,true);assert.equal(d.querySelector('[data-warmup-step="1"]').getAttribute('aria-current'),'step');await s.w.happyDOM.close();
+});
