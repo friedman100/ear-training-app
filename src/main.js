@@ -1,3 +1,4 @@
+import {createChordScreen} from './chord-screen.js';
 import {PLAYBACK_TYPES} from './playback-plan.js';
 import './style.css';
 import {RANGES,ENGLISH_INTERVALS,INTERVALS,STAGES,windowSize,initialState,question,answer,record,load} from './logic.js';
@@ -8,13 +9,14 @@ let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='
 let session=loadSession(storage);
 const app=document.querySelector('#app');
 let section=location.protocol==='file:'?'intervals':'singing';
-const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button></nav>`;
+const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button><button data-section="chords" aria-pressed="${section==='chords'}">3. זיהוי אקורדים</button></nav>`;
 function bindPathNavigation(){document.querySelectorAll('[data-section]').forEach(button=>button.onclick=()=>{
  if(button.dataset.section===section)return;
  const frame=document.getElementById('singing-frame');
  try{if(frame?.contentWindow)frame.contentWindow.dispatchEvent(new Event('singing-stop'));}catch{}
- token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
+ chords.hide();token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
 });}
+const chords=createChordScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 function renderSinging(){
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1&v=simple-success-9" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
  bindPathNavigation();
@@ -31,6 +33,7 @@ function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=q
 async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},state.playbackType);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
+ if(section==='chords'){chords.show();return;}
  if(section==='singing'){renderSinging();return;}
  if(session.ended){renderSummary();return;}
  const stats=state.stats[state.mode], pct=stats.total?Math.round(100*stats.correct/stats.total):0;

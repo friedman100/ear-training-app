@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {play,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
+import {playChord,play,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
 test('sampled piano is softened on initial and repeated playback with a gentle overlapping release',async()=>{
  const original={AudioContext:globalThis.AudioContext,window:globalThis.window,fetch:globalThis.fetch,setTimeout:globalThis.setTimeout};
  const notes=[],envelopes=[],delays=[];
@@ -42,6 +42,11 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  assert.deepEqual(offsets,type==='harmonic'?[0,0]:Array.from({length:count},(_,i)=>i*.85));
  assert.ok(delays.at(-1)/1000+10>=played.at(-1).stopTime);
  assert.equal(levels[0][1].v,type==='harmonic'?.7:1);
+ }
+ for(const tones of [[60,67,72],[60,67,72,76]])for(const broken of [false,true]){
+ const before=notes.length;await playChord(tones,broken);const played=notes.slice(before);assert.equal(played.length,tones.length);
+ played.forEach((note,i)=>assert.ok(Math.abs(note.startTime-played[0].startTime-(broken?i*.85:0))<1e-9));
+ assert.equal(envelopes.at(-1)[1].v,broken?1:1/Math.sqrt(tones.length));
  }
  }finally{Object.assign(globalThis,original);}
 });

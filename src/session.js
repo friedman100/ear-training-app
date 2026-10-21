@@ -10,13 +10,13 @@ export function completeQuestion(session,q){
 export function noteUnlocks(session,ids){
  return {...session,unlocked:[...new Set([...session.unlocked,...ids])]};
 }
-export function loadSession(storage){
+export function loadSession(storage,key=SESSION_KEY,maxId=12){
  try{
- const s=JSON.parse(storage.getItem(SESSION_KEY));
- if(!s||s.version!==1||typeof s.ended!=='boolean'||!['total','correct','streak','best'].every(k=>Number.isInteger(s[k])&&s[k]>=0)||s.correct>s.total||s.streak>s.best||s.best>s.correct||!s.intervals||typeof s.intervals!=='object'||Array.isArray(s.intervals)||!Array.isArray(s.unlocked)||s.unlocked.some(id=>!Number.isInteger(id)||id<1||id>12))return newSession();
+ const s=JSON.parse(storage.getItem(key));
+ if(!s||s.version!==1||typeof s.ended!=='boolean'||!['total','correct','streak','best'].every(k=>Number.isInteger(s[k])&&s[k]>=0)||s.correct>s.total||s.streak>s.best||s.best>s.correct||!s.intervals||typeof s.intervals!=='object'||Array.isArray(s.intervals)||!Array.isArray(s.unlocked)||s.unlocked.some(id=>!Number.isInteger(id)||id<1||id>maxId))return newSession();
  let total=0,correct=0;
  for(const [id,row] of Object.entries(s.intervals)){
- if(!Number.isInteger(+id)||+id<1||+id>12||!Number.isInteger(row?.total)||row.total<1||!Number.isInteger(row.correct)||row.correct<0||row.correct>row.total)return newSession();
+ if(!Number.isInteger(+id)||+id<1||+id>maxId||!Number.isInteger(row?.total)||row.total<1||!Number.isInteger(row.correct)||row.correct<0||row.correct>row.total)return newSession();
  total+=row.total;correct+=row.correct;
  }
  if(total!==s.total||correct!==s.correct)return newSession();

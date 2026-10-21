@@ -9,12 +9,17 @@ let sources=[];
 let generation=0;
 export function stop(){generation++;sources.forEach(s=>{try{s.stop();}catch{}});sources=[];}
 export async function play(start,end,onPlaybackChange=()=>{},onSecondNote=()=>{},type='ascending'){
+ return playPlan(playbackPlan(start,end,type,NOTE_DURATION+NOTE_GAP),onPlaybackChange,onSecondNote,type==='harmonic'?.7:1);
+}
+export function chordPlan(notes,broken=false){return notes.map((midi,i)=>({midi,offset:broken?i*(NOTE_DURATION+NOTE_GAP):0}));}
+export function playChord(notes,broken=false,onPlaybackChange=()=>{},onReady=()=>{}){
+ return playPlan(chordPlan(notes,broken),onPlaybackChange,onReady,broken?1:1/Math.sqrt(notes.length));
+}
+async function playPlan(plan,onPlaybackChange,onReady,level){
  stop();const request=generation;
  context??=new AudioContext();
  await context.resume();
- const plan=playbackPlan(start,end,type,NOTE_DURATION+NOTE_GAP);
  const notes=[...new Set(plan.map(note=>note.midi))];
- const level=type==='harmonic'?.7:1;
  await Promise.all(notes.map(async midi=>{
  if(buffers.has(midi))return;
  const url=window.PIANO_SAMPLES?.[midi] ? `data:audio/mpeg;base64,${window.PIANO_SAMPLES[midi]}` : `${import.meta.env.BASE_URL}audio/${midi}.mp3`;
@@ -39,6 +44,6 @@ export async function play(start,end,onPlaybackChange=()=>{},onSecondNote=()=>{}
  source.start(t);source.stop(t+NOTE_DURATION+RELEASE_TAIL);sources.push(source);
  });
  setTimeout(()=>{if(request===generation)onPlaybackChange(true);},30);
- setTimeout(()=>{if(request===generation)onSecondNote();},Math.round((.03+plan[1].offset)*1000));
+ setTimeout(()=>{if(request===generation)onReady();},Math.round((.03+plan[1].offset)*1000));
  await new Promise(resolve=>setTimeout(resolve,Math.round((plan.at(-1).offset+NOTE_DURATION+RELEASE_TAIL+.05)*1000)));
 }
