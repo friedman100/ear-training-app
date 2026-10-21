@@ -131,22 +131,22 @@ test('new short warmup is appended below existing exercises and scores all four 
  assert.equal(d.querySelectorAll('#warmup-chart rect').length,4);
  assert.ok(d.querySelector('#warmup-note2').textContent.includes('מי'));assert.ok(d.querySelector('#warmup-note3').textContent.includes('רה'));
  d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-start').click();await flush();
- s.tick(15300);assert.ok(d.querySelector('#warmup-phase').textContent.includes('1'));
+ s.tick(7700);assert.ok(d.querySelector('#warmup-phase').textContent.includes('1'));
  const frequencies=[130.8128,146.8324,164.8138,146.8324];
- for(let time=17050;time<31450;time+=50){s.setSignal(tone(frequencies[Math.floor((time-17050)/3600)]));s.tick(time);}
- s.tick(31500);assert.equal(d.querySelector('#warmup-success').hidden,false);
+ for(let time=9450;time<16650;time+=50){s.setSignal(tone(frequencies[Math.floor((time-9450)/1800)]));s.tick(time);}
+ s.tick(16700);assert.equal(d.querySelector('#warmup-success').hidden,false);
  for(let i=0;i<4;i++)assert.ok(d.querySelector('#warmup-result'+i).textContent.includes('מדויק'));
  assert.ok(d.querySelector('#warmup-trace').childElementCount>20);await s.w.happyDOM.close();
 });
 test('short warmup uses its own timing and accuracy threshold without changing the pair exercise',()=>{
  const notes=[48,50,52,50],config={...WARMUP_TIMING};
- assert.equal(config.slotMs,3600);
- assert.equal(timelinePhase(17000+1800,true,{...config,noteCount:4}).step,0);
- assert.equal(timelinePhase(17000+3600,true,{...config,noteCount:4}).step,1);
+ assert.equal(config.slotMs,1800);
+ assert.equal(timelinePhase(9400+900,true,{...config,noteCount:4}).step,0);
+ assert.equal(timelinePhase(9400+1800,true,{...config,noteCount:4}).step,1);
  const round=createTimedRound(notes,config);
- for(let time=17000;time<31400;time+=50){const step=Math.floor((time-17000)/3600);round.update(step===2?null:detected(440*2**((notes[step]-69)/12)),time);}
+ for(let time=9400;time<16600;time+=50){const step=Math.floor((time-9400)/1800);round.update(step===2?null:detected(440*2**((notes[step]-69)/12)),time);}
  assert.equal(round.results.length,4);assert.deepEqual(round.results.map(r=>r.accurate),[true,true,false,true]);
- assert.equal(timelinePhase(31400,true,{...config,noteCount:4}).phase,'done');
+ assert.equal(timelinePhase(16600,true,{...config,noteCount:4}).phase,'done');
  assert.equal(timelinePhase(6400).phase,'sing');
 });
 
@@ -154,11 +154,11 @@ test('short warmup uses its own timing and accuracy threshold without changing t
  const s=await setup({bootstrap:true}),d=s.w.document;
  d.querySelector('#warmup-demo').click();await flush();
  assert.equal(s.played.length,4);
- for(let i=0;i<4;i++){assert.ok(Math.abs(s.played[i].start-(.05+i*3.6))<1e-8);assert.ok(Math.abs(s.played[i].stop-s.played[i].start-4.4)<1e-8);}
- s.tick(1850);assert.ok(d.querySelector('#warmup-target0').classList.contains('active'));assert.equal(+d.querySelector('#warmup-cursor').getAttribute('x1'),90);
- s.tick(3650);assert.ok(d.querySelector('#warmup-target1').classList.contains('active'));
- s.tick(15100);assert.ok(d.querySelector('#warmup-stop').hidden===false);
- s.tick(15300);assert.equal(d.querySelector('#warmup-stop').hidden,true);
- assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=slow-warmup-3/);
+ for(let i=0;i<4;i++){assert.ok(Math.abs(s.played[i].start-(.05+i*1.8))<1e-8);assert.ok(Math.abs(s.played[i].stop-s.played[i].start-2.2)<1e-8);}
+ s.tick(950);assert.ok(d.querySelector('#warmup-target0').classList.contains('active'));assert.ok(Math.abs(+d.querySelector('#warmup-cursor').getAttribute('x1')-90)<1e-8);
+ s.tick(1850);assert.ok(d.querySelector('#warmup-target1').classList.contains('active'));
+ s.tick(7550);assert.ok(d.querySelector('#warmup-stop').hidden===false);
+ s.tick(7700);assert.equal(d.querySelector('#warmup-stop').hidden,true);
+ assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=warmup-1800-v4/);
  await s.w.happyDOM.close();
  });

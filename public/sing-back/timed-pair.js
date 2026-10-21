@@ -1,5 +1,5 @@
-import {detectPitch,centsFromTarget} from './pitch.js?v=slow-warmup-3';
-import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=slow-warmup-3';
+import {detectPitch,centsFromTarget} from './pitch.js?v=warmup-1800-v4';
+import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=warmup-1800-v4';
 export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pattern=null,slotMs=SLOT_MS,demoMs=4000,countMs=1800,requiredMs=REQUIRED_ACCURATE_MS}={}){
  const $=id=>env.document.getElementById(prefix+id);
  let context,stream,input,analyser,raf,running=false,pending=false,serial=0,notes=[48,50],origin=0,withSinging=false,round,lastFrame=0;
