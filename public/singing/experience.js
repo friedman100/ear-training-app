@@ -1,5 +1,5 @@
 import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from './warmup-progression.js?v=singing-modes-6';
-import {WARMUP_PATTERNS} from './warmup-patterns.js?v=singing-modes-6';
+import {WARMUP_PATTERNS} from './warmup-patterns.js?v=low-do-8';
 import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-modes-6';
 import {PROGRESS_KEY,loadProgress,completeTarget,nextTarget,solved} from './progression.js?v=singing-modes-6';
 import {createPrototype} from '../sing-back/app.js?v=singing-modes-6';
