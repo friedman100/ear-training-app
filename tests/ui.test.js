@@ -5,7 +5,7 @@ import test from 'node:test';
 import {PLAYBACK_DURATION_MS} from '../src/audio.js';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js'));
 const source=await readFile('dist/assets/'+asset,'utf8');
-function setup(saved,controlled=false,sessionSaved){
+function setup(saved,controlled=false,sessionSaved,startOnLanding=false){
  const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';
  if(sessionSaved)w.localStorage.setItem('ear-training-session-v1',sessionSaved);
  if(saved)w.localStorage.setItem('ear-training-v1',saved);
@@ -13,7 +13,7 @@ function setup(saved,controlled=false,sessionSaved){
  w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(t){w.playedNotes++;this.startTime=t;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
  w.setTimeout=(fn,ms)=>{if(controlled)w.audioTimers.push({fn,ms});else queueMicrotask(fn);return 1;};
- w.eval(source);return w;
+ w.eval(source);if(!startOnLanding)w.document.querySelector('[data-section="intervals"]').click();return w;
 }
 const flush=async()=>{for(let i=0;i<50;i++)await Promise.resolve();};
 const stored=w=>JSON.parse(w.localStorage.getItem('ear-training-v1'));
@@ -243,4 +243,14 @@ test('singing path preserves interval question, progress and summary while stopp
  d.querySelector('#end-session').click();assert.ok(d.querySelector('.summary'));
  d.querySelector('[data-section="singing"]').click();assert.ok(d.querySelector('#singing-frame'));d.querySelector('[data-section="intervals"]').click();assert.ok(d.querySelector('.summary'));
  await w.happyDOM.close();
+});
+
+test('main web link opens singing first without losing interval progress or a completed session summary',async()=>{
+ const fresh=setup(undefined,true,undefined,true),d=fresh.document;
+ assert.ok(d.querySelector('#singing-frame'));assert.equal(d.querySelector('[data-section="singing"]').getAttribute('aria-pressed'),'true');assert.equal(d.querySelector('#listen'),null);assert.equal(fresh.playedNotes,0);
+ d.querySelector('[data-section="intervals"]').click();assert.ok(d.querySelector('#listen'));d.querySelector('[data-section="singing"]').click();assert.ok(d.querySelector('#singing-frame'));await fresh.happyDOM.close();
+ const {initialState}=await import('../src/logic.js');const {newSession}=await import('../src/session.js');const state=initialState();state.stage=2;
+ const saved=JSON.stringify(state),session=JSON.stringify({...newSession(),ended:true});
+ const returning=setup(saved,true,session,true),r=returning.document;assert.ok(r.querySelector('#singing-frame'));assert.equal(returning.localStorage.getItem('ear-training-v1'),saved);assert.equal(returning.localStorage.getItem('ear-training-session-v1'),session);
+ r.querySelector('[data-section="intervals"]').click();assert.ok(r.querySelector('.summary'));assert.equal(returning.playedNotes,0);await returning.happyDOM.close();
 });

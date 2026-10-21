@@ -7,7 +7,7 @@ let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()
 let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='',settings=false,token=0;
 let session=loadSession(storage);
 const app=document.querySelector('#app');
-let section='intervals';
+let section=location.protocol==='file:'?'intervals':'singing';
 const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button></nav>`;
 function bindPathNavigation(){document.querySelectorAll('[data-section]').forEach(button=>button.onclick=()=>{
  if(button.dataset.section===section)return;
