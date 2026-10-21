@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {Window} from 'happy-dom';
 import {detectPitch,centsFromTarget,createTracker} from '../public/sing-back/pitch.js';
+import {createTimedPair} from '../public/sing-back/timed-pair.js';
+import {timelinePhase,createTimedRound} from '../public/sing-back/timeline.js';
 import {createPrototype} from '../public/sing-back/app.js';
 function tone(frequency,rate=48000,amplitude=.16){return Float32Array.from({length:4096},(_,i)=>amplitude*(Math.sin(2*Math.PI*frequency*i/rate)+.5*Math.sin(4*Math.PI*frequency*i/rate)+.25*Math.sin(6*Math.PI*frequency*i/rate)));}
 const detected=(f)=>({frequency:f,confidence:.98});
@@ -32,12 +34,12 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.ok(Math.abs(tracker.update(detected(146.83),48,250).cents)<1);
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
-async function setup({secure=true,deny=false,pair=false}={}){
+async function setup({secure=true,deny=false,timed=false}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
  w.document.write((await readFile('public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
  let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;
- const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;currentTime=0;destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(){},stop(){}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
- createPrototype(env,{prefix:pair?'pair-':'',pair});
+ const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(){},stop(){}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
+ if(timed)createTimedPair(env);else createPrototype(env);
  return {w,env,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
@@ -73,19 +75,41 @@ test('single-note exercise includes all chromatic notes and accepts a black key 
  s.setSignal(tone(277.1826));d.querySelector('#mic').click();await flush();for(let t=50;t<=1000;t+=50)s.tick(t);
  assert.equal(d.querySelector('#success').hidden,false);await s.w.happyDOM.close();
 });
-test('two-note exercise requires both pitches in order in ascending and descending practice',async()=>{
+
+test('timeline phases advance by time and never wait for pitch success',()=>{
+ assert.equal(timelinePhase(0).phase,'listen');assert.equal(timelinePhase(1900).step,1);
+ assert.equal(timelinePhase(4100).phase,'count');assert.equal(timelinePhase(5000).count,2);
+ const round=createTimedRound([48,50]);
+ for(let t=5800;t<7600;t+=50)round.update(null,t);
+ assert.equal(round.update(null,7700).phase.step,1);assert.equal(timelinePhase(9500).phase,'done');
+ assert.ok(round.results.every(r=>!r.accurate));
+});
+test('timed singing retains both targets and traces, scores each slot and supports ascending and descending',async()=>{
  for(const direction of ['ascending','descending']){
- const s=await setup({pair:true}),d=s.w.document;
- d.querySelector('#pair-direction').value=direction;d.querySelector('#pair-direction').dispatchEvent(new s.w.Event('change'));
+ const s=await setup({timed:true}),d=s.w.document;
+ assert.equal(s.requests,0);assert.ok(d.querySelector('#timed-start').disabled);
+ d.querySelector('#timed-direction').value=direction;d.querySelector('#timed-direction').dispatchEvent(new s.w.Event('change'));
+ d.querySelector('#timed-mic').click();await flush();d.querySelector('#timed-start').click();await flush();
+ s.tick(300);assert.ok(d.querySelector('#timed-phase').textContent.includes('מקשיבים'));assert.equal(d.querySelector('#timed-trace').childElementCount,0);
+ s.tick(4500);assert.ok(d.querySelector('#timed-phase').textContent.includes('1'));
+ s.tick(5500);assert.ok(d.querySelector('#timed-phase').textContent.includes('2'));
  const [first,second]=direction==='ascending'?[130.8128,146.8324]:[146.8324,130.8128];
- d.querySelector('#pair-mic').click();await flush();s.setSignal(tone(first));
- for(let t=50;t<=1000;t+=50)s.tick(t);
- assert.equal(d.querySelector('#pair-success').hidden,true);assert.equal(d.querySelectorAll('#pair-steps .done').length,1);
- for(let t=1050;t<=1800;t+=50)s.tick(t);assert.equal(d.querySelector('#pair-success').hidden,true);
- s.setSignal(tone(second));for(let t=1900;t<=3000;t+=50)s.tick(t);
- assert.equal(d.querySelector('#pair-success').hidden,false);assert.equal(d.querySelectorAll('#pair-steps .done').length,2);
- d.querySelector('#pair-retry').click();assert.equal(d.querySelector('#pair-success').hidden,true);assert.equal(d.querySelectorAll('#pair-steps .done').length,0);
- assert.equal(d.querySelector('#pair-target-name').textContent,direction==='ascending'?'C3':'D3');
- await s.w.happyDOM.close();
+ s.setSignal(tone(first));for(let t=5850;t<=7600;t+=50)s.tick(t);
+ assert.ok(d.querySelector('#timed-result0').textContent.includes('מדויק'));
+ s.setSignal(tone(second));for(let t=7700;t<=9400;t+=50)s.tick(t);s.tick(9500);
+ assert.equal(d.querySelector('#timed-success').hidden,false);assert.ok(d.querySelector('#timed-result1').textContent.includes('מדויק'));
+ assert.equal(d.querySelectorAll('#timed-chart rect').length,2);const count=d.querySelector('#timed-trace').childElementCount;assert.ok(count>20);
+ s.tick(11000);assert.equal(d.querySelector('#timed-trace').childElementCount,count);
+ d.querySelector('#timed-start').click();await flush();assert.equal(d.querySelector('#timed-trace').childElementCount,0);assert.equal(d.querySelector('#timed-success').hidden,true);
+ d.querySelector('#timed-mic').click();assert.equal(s.stopped,1);await s.w.happyDOM.close();
  }
+});
+test('missing first note does not stall or erase the first target',async()=>{
+ const s=await setup({timed:true}),d=s.w.document;
+ d.querySelector('#timed-mic').click();await flush();d.querySelector('#timed-start').click();await flush();
+ s.setSignal(new Float32Array(4096));for(let t=5850;t<=8000;t+=50)s.tick(t);
+ assert.ok(d.querySelector('#timed-target1').classList.contains('active'));
+ assert.equal(d.querySelectorAll('#timed-chart rect').length,2);
+ s.tick(9500);assert.equal(d.querySelector('#timed-success').hidden,true);assert.ok(d.querySelector('#timed-result0').textContent.includes('לא זוהה'));
+ await s.w.happyDOM.close();
 });

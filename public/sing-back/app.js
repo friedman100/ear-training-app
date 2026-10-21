@@ -1,3 +1,4 @@
+import {createTimedPair} from './timed-pair.js';
 import {detectPitch,createTracker} from './pitch.js';
 
 export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{}}={}){
@@ -95,4 +96,4 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  // No storage, microphone request or sound is started on page load.
  return {stop:stopMic};
 }
-if(typeof window!=='undefined'&&window.document?.getElementById('mic')){let single,two;single=createPrototype(window,{onMicStart:()=>two?.stop()});if(window.document.getElementById('pair-mic'))two=createPrototype(window,{prefix:'pair-',pair:true,onMicStart:()=>single.stop()});}
+if(typeof window!=='undefined'&&window.document?.getElementById('mic')){let single,two;single=createPrototype(window,{onMicStart:()=>two?.stop()});if(window.document.getElementById('timed-mic'))two=createTimedPair(window,{onActivate:()=>single.stop()});}
