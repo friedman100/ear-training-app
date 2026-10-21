@@ -1,3 +1,4 @@
+import {WARMUP_PATTERNS} from '../public/singing/warmup-patterns.js';
 import {PAIR_KEY,newPairProgress,loadPairProgress,completePair,nextPair} from '../public/singing/pair-progression.js';
 import {PROGRESS_KEY,NATURALS,newProgress,loadProgress,completeTarget,nextTarget} from '../public/singing/progression.js';
 import test from 'node:test';
@@ -46,7 +47,7 @@ async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=
  w.localStorage.setItem('ear-training-v1','existing-interval-progress');
  const listeners=new Map();
  let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;const played=[];
- const env={document:w.document,Event:w.Event,localStorage:w.localStorage,location:w.location,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(at){played.push({start:at});},stop(at){if(at!==undefined)played.at(-1).stop=at;}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);}};env.parent=env;
+ const env={document:w.document,Event:w.Event,localStorage:w.localStorage,location:w.location,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(buffer){return Promise.resolve({midi:new Uint8Array(buffer)[0]});}createBufferSource(){source={connect(){},start(at){played.push({start:at,note:this.buffer?.midi});},stop(at){if(at!==undefined)played.at(-1).stop=at;}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async url=>({ok:true,arrayBuffer:async()=>{const bytes=new Uint8Array(8);bytes[0]=Number(url.match(/(\d+)\.mp3/)[1]);return bytes.buffer;}}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);}};env.parent=env;
  if(production){globalThis.window=env;try{await import('../public/singing/experience.js?test='+ ++bootstrapId);}finally{delete globalThis.window;}}else if(bootstrap){globalThis.window=env;try{await import('../public/sing-back/app.js?bootstrap-test='+ ++bootstrapId);}finally{delete globalThis.window;}}else if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
  return {w,env,played,emit(name){listeners.get(name)?.forEach(fn=>fn());},get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
@@ -292,4 +293,30 @@ test('pair preparation excludes partial, stopped and repeated rounds, restores p
  d.querySelector('#open-warmup').click();assert.equal(d.querySelector('#warmup-exercise').hidden,false);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');assert.equal(JSON.parse(s.w.localStorage.getItem(PROGRESS_KEY)).completed,10);
  const reloaded=await setup({production:true,singingProgress:finishedSinging,pairProgress:progress(),singingSaved:JSON.stringify({exercise:'warmup'})});assert.equal(reloaded.w.document.querySelector('#warmup-exercise').hidden,false);
  await s.w.happyDOM.close();await reloaded.w.happyDOM.close();
+});
+
+test('five fixed C warmups play exact notes, rebuild charts, score every slot and retain pattern selection',async()=>{
+ const expected=[[48,50,52,50],[48,50,52,55],[48,50,52,53,55,53,52,50,48],[48,52,55,52,48],[48,52,50,53,52,55,60]];
+ assert.deepEqual(WARMUP_PATTERNS.map(p=>p.offsets.map(n=>48+n)),expected);
+ const s=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:JSON.stringify({exercise:'warmup','warmup-root':50})}),d=s.w.document;let time=0;
+ assert.equal(d.querySelector('#warmup-pattern').options.length,5);assert.equal(d.querySelector('#warmup-root').closest('.timed-options').hidden,true);assert.equal(d.querySelector('#warmup-root').value,'48');
+ d.querySelector('#warmup-mic').click();await flush();
+ for(let i=0;i<5;i++){
+  const notes=expected[i],selector=d.querySelector('#warmup-pattern');selector.value=WARMUP_PATTERNS[i].id;selector.dispatchEvent(new s.w.Event('change'));
+  assert.equal(d.querySelectorAll('#warmup-chart rect').length,notes.length);assert.equal(d.querySelectorAll('#warmup-exercise .timed-results span').length,notes.length);assert.equal(d.querySelector('#warmup-pattern-name').textContent,WARMUP_PATTERNS[i].name);
+  const before=s.played.length;d.querySelector('#warmup-demo').click();await flush();assert.deepEqual(s.played.slice(before).map(p=>p.note),notes);assert.equal(selector.disabled,true);assert.equal(d.querySelector('#next-warmup-pattern').disabled,true);
+  for(let j=1;j<notes.length;j++)assert.ok(Math.abs(s.played[before+j].start-s.played[before+j-1].start-1.5)<1e-8);
+  time+=notes.length*1500+500;s.tick(time);assert.equal(selector.disabled,false);
+  d.querySelector('#warmup-retry').click();await flush();assert.equal(s.played.length,before+notes.length);const start=time+1850;
+  for(let t=start;t<start+notes.length*1500;t+=50){const note=notes[Math.floor((t-start)/1500)];s.setSignal(tone(440*2**((note-69)/12)));s.tick(t);}
+  time=start+notes.length*1500+50;s.tick(time);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.ok(d.querySelector('#warmup-success').textContent.includes(WARMUP_PATTERNS[i].name));
+  for(let j=0;j<notes.length;j++)assert.ok(d.querySelector('#warmup-result'+j).textContent.includes('מדויק'));
+  // Octave-equivalent singing maps to the current target, including G and the high final C.
+  const centers=notes.map((_,j)=>Number(d.querySelector('#warmup-target'+j).getAttribute('y'))+Number(d.querySelector('#warmup-target'+j).getAttribute('height'))/2);
+  const dots=[...d.querySelectorAll('#warmup-trace circle')];
+  for(let j=0;j<notes.length;j++){const dot=dots.find(dot=>Number(dot.getAttribute('cx'))>20+560*(j+.6)/notes.length&&Number(dot.getAttribute('cx'))<20+560*(j+.9)/notes.length);assert.ok(dot);assert.ok(Math.abs(Number(dot.getAttribute('cy'))-centers[j])<2);}
+ }
+ assert.equal(d.querySelector('#next-warmup-pattern').disabled,true);const saved=s.w.localStorage.getItem('ear-training-singing-v1');
+ const again=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:saved});assert.equal(again.w.document.querySelector('#warmup-pattern').value,WARMUP_PATTERNS[4].id);assert.equal(again.w.document.querySelectorAll('#warmup-chart rect').length,7);assert.equal(again.w.document.querySelector('#warmup-root').value,'48');
+ assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');await s.w.happyDOM.close();await again.w.happyDOM.close();
 });

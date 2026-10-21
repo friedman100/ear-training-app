@@ -4,6 +4,7 @@ export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},o
  const $=id=>env.document.getElementById(prefix+id);
  let context,stream,input,analyser,raf,running=false,pending=false,serial=0,notes=[48,50],origin=0,withSinging=false,round,lastFrame=0,roundDemoMs=demoMs;
  const cache=new Map();let sources=[];
+ const hebrew=['דו','דו דיאז / רה במול','רה','רה דיאז / מי במול','מי','פה','פה דיאז / סול במול','סול','סול דיאז / לה במול','לה','לה דיאז / סי במול','סי'];
  const names=['C','C♯/D♭','D','D♯/E♭','E','F','F♯/G♭','G','G♯/A♭','A','A♯/B♭','B'];
  const credit=r=>`${(Math.min(r.goodMs,requiredMs)/1000).toFixed(2)} מתוך ${(requiredMs/1000).toFixed(2)} שניות מדויקות`;
  const title=m=>names[m%12].split('/').map(n=>n+(Math.floor(m/12)-1)).join(' / ');
@@ -12,7 +13,14 @@ export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},o
  function ctx(){context??=new (env.AudioContext||env.webkitAudioContext)();return context;}
  function controls(){['demo','root','direction'].forEach(id=>$(id).disabled=running||pending);$('start').disabled=running||!stream;if($('retry'))$('retry').disabled=running||pending||!stream;$('stop').hidden=!running;onBusyChange(running||pending);}
  function status(text){if($('phase').textContent!==text)$('phase').textContent=text;}
- function setup(){const low=+$('root').value;notes=pattern?pattern.map(n=>low+n):$('direction').value==='ascending'?[low,low+2]:[low+2,low];for(let i=0;i<notes.length;i++){$('note'+i).textContent=pattern?`${['דו','רה','מי','רה'][i]} · ${title(notes[i])}`:title(notes[i]);$('target'+i).setAttribute('y',String(145-(notes[i]-low)*100*scale()-25*scale()));$('target'+i).setAttribute('height',String(50*scale()));if(pattern){const width=560/notes.length;$('note'+i).setAttribute('x',String(20+width*(i+.5)));$('target'+i).setAttribute('x',String(28+width*i));$('target'+i).setAttribute('width',String(width-16));}$('target'+i).classList.remove('active');$('result'+i).textContent=`${noteLabel(i)} — ממתין`;$('result'+i).className='';}$('trace').replaceChildren();$('cursor').setAttribute('x1','20');$('cursor').setAttribute('x2','20');$('success').hidden=true;status('מוכנים להקשיב?');}
+ function buildPatternChart(){
+ const chart=$('chart'),width=560/notes.length;
+ chart.dataset.noteCount=String(notes.length);
+ chart.setAttribute('aria-label','תבנית לשירה: '+notes.map(n=>hebrew[n%12]).join('–')+'. הקווים הם המטרה והנקודות הן הקול שלכם.');
+ chart.innerHTML=`<path d="M20 185H580 ${notes.slice(1).map((_,i)=>`M${20+width*(i+1)} 35V185`).join(' ')}" stroke="#dce5d5" stroke-width="1" fill="none"/>`+notes.map((n,i)=>`<text id="${prefix}note${i}" x="${20+width*(i+.5)}" y="25" text-anchor="middle"></text><rect id="${prefix}target${i}" x="${28+width*i}" width="${width-16}" height="10" rx="5"/><text x="${20+width*(i+.5)}" y="210" text-anchor="middle">${i+1}</text>`).join('')+`<g id="${prefix}trace"></g><line id="${prefix}cursor" x1="20" y1="35" x2="20" y2="185"/>`;
+ const results=$('result0').parentElement;results.innerHTML=notes.map((_,i)=>`<span id="${prefix}result${i}"></span>`).join('');
+ }
+ function setup(){const low=+$('root').value;notes=pattern?pattern.map(n=>low+n):$('direction').value==='ascending'?[low,low+2]:[low+2,low];if(pattern)buildPatternChart();for(let i=0;i<notes.length;i++){$('note'+i).textContent=pattern?`${hebrew[notes[i]%12]}${notes.length<=5?' · '+title(notes[i]):''}`:title(notes[i]);$('target'+i).setAttribute('y',String(145-(notes[i]-low)*100*scale()-25*scale()));$('target'+i).setAttribute('height',String(50*scale()));if(pattern){const width=560/notes.length;$('note'+i).setAttribute('x',String(20+width*(i+.5)));$('target'+i).setAttribute('x',String(28+width*i));$('target'+i).setAttribute('width',String(width-16));}$('target'+i).classList.remove('active');$('result'+i).textContent=`${noteLabel(i)} — ממתין`;$('result'+i).className='';}$('trace').replaceChildren();$('cursor').setAttribute('x1','20');$('cursor').setAttribute('x2','20');$('success').hidden=true;status('מוכנים להקשיב?');}
  function cancel(){serial++;running=false;if(raf!==undefined)env.cancelAnimationFrame(raf);sources.forEach(s=>{try{s.stop();}catch{}});sources=[];controls();}
  function stop(){cancel();input?.disconnect();input=null;stream?.getTracks().forEach(t=>t.stop());stream=null;pending=false;$('mic').disabled=false;$('mic').textContent='הפעלת מיקרופון לתיבה';$('mic-state').textContent='המיקרופון כבוי';controls();status('הניסיון נעצר. אפשר להתחיל מחדש.');}
  async function microphone(){
@@ -42,7 +50,7 @@ export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},o
  if(time-lastFrame>=50){lastFrame=time;
  const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);const detection=detectPitch(data,context.sampleRate);const {result}=round.update(detection,time);
  status(`עכשיו שרים — ${noteLabel(phase.step)}${result?.reliable?'':' · מקשיב...'}`);
- if(detection&&result?.reliable){const low=Math.min(...notes),cents=centsFromTarget(detection.frequency,low),y=Math.max(40,Math.min(180,145-cents*scale()));const dot=env.document.createElementNS('http://www.w3.org/2000/svg','circle');dot.setAttribute('cx',String(x));dot.setAttribute('cy',String(y));dot.setAttribute('r','3');dot.setAttribute('fill',Math.abs(centsFromTarget(detection.frequency,notes[phase.step]))<=25?'#3f8c43':'#b78a4d');$('trace').append(dot);}
+ if(detection&&result?.reliable){const low=Math.min(...notes),cents=(notes[phase.step]-low)*100+centsFromTarget(detection.frequency,notes[phase.step]),y=Math.max(40,Math.min(180,145-cents*scale()));const dot=env.document.createElementNS('http://www.w3.org/2000/svg','circle');dot.setAttribute('cx',String(x));dot.setAttribute('cy',String(y));dot.setAttribute('r','3');dot.setAttribute('fill',Math.abs(centsFromTarget(detection.frequency,notes[phase.step]))<=25?'#3f8c43':'#b78a4d');$('trace').append(dot);}
  round.results.forEach((r,i)=>{$('result'+i).textContent=`${noteLabel(i)} — ${r.accurate?'✓ מדויק':credit(r)}`;$('result'+i).className=r.accurate?'achieved':'';});
  }
  }
@@ -59,5 +67,5 @@ export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},o
  }
  $('root').innerHTML=Array.from({length:pattern?13:11},(_,i)=>`<option value="${48+i}">${title(48+i)}</option>`).join('');$('root').value='48';setup();controls();
  $('root').addEventListener('change',setup);$('direction').addEventListener('change',setup);$('demo').addEventListener('click',()=>start(false));$('start').addEventListener('click',()=>start(true));$('retry')?.addEventListener('click',()=>start(true,true));$('mic').addEventListener('click',microphone);$('stop').addEventListener('click',()=>{cancel();status('הניסיון נעצר. אפשר לנסות שוב.');});env.addEventListener('pagehide',()=>{stop();context?.close();context=undefined;});
- return {stop,setQuestion({root,direction}){if(pending||!Number.isInteger(root)||root<48||root>58||!['ascending','descending'].includes(direction))return false;cancel();$('root').value=String(root);$('direction').value=direction;setup();return true;}};
+ return {stop,setPattern(offsets){if(pending||running||!Array.isArray(offsets)||offsets.length<2||offsets.length>12||!offsets.every(n=>Number.isInteger(n)&&n>=0&&n<=12))return false;cancel();pattern=[...offsets];demoMs=pattern.length*slotMs+400;$('root').value='48';setup();return true;},setQuestion({root,direction}){if(pending||!Number.isInteger(root)||root<48||root>58||!['ascending','descending'].includes(direction))return false;cancel();$('root').value=String(root);$('direction').value=direction;setup();return true;}};
 }
