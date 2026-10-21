@@ -32,12 +32,12 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.ok(Math.abs(tracker.update(detected(146.83),48,250).cents)<1);
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
-async function setup({secure=true,deny=false}={}){
+async function setup({secure=true,deny=false,pair=false}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
  w.document.write((await readFile('public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
  let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;
  const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;currentTime=0;destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(){},stop(){}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
- createPrototype(env);
+ createPrototype(env,{prefix:pair?'pair-':'',pair});
  return {w,env,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
@@ -61,5 +61,31 @@ test('piano playback cannot earn success through microphone bleed',async()=>{
 test('permission refusal and insecure hosting show clear errors without analysis',async()=>{
  for(const options of [{secure:false},{deny:true}]){
  const s=await setup(options),d=s.w.document;d.querySelector('#mic').click();await flush();assert.equal(d.querySelector('#error').hidden,false);assert.equal(d.querySelector('#needle').hidden,true);if(options.secure===false)assert.equal(s.requests,0);await s.w.happyDOM.close();
+ }
+});
+
+test('single-note exercise includes all chromatic notes and accepts a black key in another octave',async()=>{
+ const s=await setup(),d=s.w.document;
+ assert.equal(d.querySelectorAll('#target-select option').length,13);
+ const select=d.querySelector('#target-select');select.value='49';select.dispatchEvent(new s.w.Event('change'));
+ assert.equal(d.querySelector('#target-name').textContent,'C♯3 / D♭3');
+ assert.ok(d.querySelector('#target-hebrew').textContent.includes('דיאז'));assert.ok(d.querySelector('#target-hebrew').textContent.includes('במול'));
+ s.setSignal(tone(277.1826));d.querySelector('#mic').click();await flush();for(let t=50;t<=1000;t+=50)s.tick(t);
+ assert.equal(d.querySelector('#success').hidden,false);await s.w.happyDOM.close();
+});
+test('two-note exercise requires both pitches in order in ascending and descending practice',async()=>{
+ for(const direction of ['ascending','descending']){
+ const s=await setup({pair:true}),d=s.w.document;
+ d.querySelector('#pair-direction').value=direction;d.querySelector('#pair-direction').dispatchEvent(new s.w.Event('change'));
+ const [first,second]=direction==='ascending'?[130.8128,146.8324]:[146.8324,130.8128];
+ d.querySelector('#pair-mic').click();await flush();s.setSignal(tone(first));
+ for(let t=50;t<=1000;t+=50)s.tick(t);
+ assert.equal(d.querySelector('#pair-success').hidden,true);assert.equal(d.querySelectorAll('#pair-steps .done').length,1);
+ for(let t=1050;t<=1800;t+=50)s.tick(t);assert.equal(d.querySelector('#pair-success').hidden,true);
+ s.setSignal(tone(second));for(let t=1900;t<=3000;t+=50)s.tick(t);
+ assert.equal(d.querySelector('#pair-success').hidden,false);assert.equal(d.querySelectorAll('#pair-steps .done').length,2);
+ d.querySelector('#pair-retry').click();assert.equal(d.querySelector('#pair-success').hidden,true);assert.equal(d.querySelectorAll('#pair-steps .done').length,0);
+ assert.equal(d.querySelector('#pair-target-name').textContent,direction==='ascending'?'C3':'D3');
+ await s.w.happyDOM.close();
  }
 });
