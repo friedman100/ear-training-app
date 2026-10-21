@@ -1,6 +1,6 @@
 import {detectPitch,centsFromTarget} from './pitch.js?v=warmup-hold400-v7';
 import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=warmup-hold400-v7';
-export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pattern=null,slotMs=SLOT_MS,demoMs=4000,countMs=1800,requiredMs=REQUIRED_ACCURATE_MS}={}){
+export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},onBusyChange=()=>{},prefix='timed-',pattern=null,slotMs=SLOT_MS,demoMs=4000,countMs=1800,requiredMs=REQUIRED_ACCURATE_MS}={}){
  const $=id=>env.document.getElementById(prefix+id);
  let context,stream,input,analyser,raf,running=false,pending=false,serial=0,notes=[48,50],origin=0,withSinging=false,round,lastFrame=0,roundDemoMs=demoMs;
  const cache=new Map();let sources=[];
@@ -10,7 +10,7 @@ export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pa
  const noteLabel=i=>pattern?`צליל ${i+1}`:`צליל ${i===0?'ראשון':'שני'}`;
  const scale=()=>75/(Math.max(...notes)-Math.min(...notes))/100;
  function ctx(){context??=new (env.AudioContext||env.webkitAudioContext)();return context;}
- function controls(){['demo','root','direction'].forEach(id=>$(id).disabled=running||pending);$('start').disabled=running||!stream;if($('retry'))$('retry').disabled=running||pending||!stream;$('stop').hidden=!running;}
+ function controls(){['demo','root','direction'].forEach(id=>$(id).disabled=running||pending);$('start').disabled=running||!stream;if($('retry'))$('retry').disabled=running||pending||!stream;$('stop').hidden=!running;onBusyChange(running||pending);}
  function status(text){if($('phase').textContent!==text)$('phase').textContent=text;}
  function setup(){const low=+$('root').value;notes=pattern?pattern.map(n=>low+n):$('direction').value==='ascending'?[low,low+2]:[low+2,low];for(let i=0;i<notes.length;i++){$('note'+i).textContent=pattern?`${['דו','רה','מי','רה'][i]} · ${title(notes[i])}`:title(notes[i]);$('target'+i).setAttribute('y',String(145-(notes[i]-low)*100*scale()-25*scale()));$('target'+i).setAttribute('height',String(50*scale()));if(pattern){const width=560/notes.length;$('note'+i).setAttribute('x',String(20+width*(i+.5)));$('target'+i).setAttribute('x',String(28+width*i));$('target'+i).setAttribute('width',String(width-16));}$('target'+i).classList.remove('active');$('result'+i).textContent=`${noteLabel(i)} — ממתין`;$('result'+i).className='';}$('trace').replaceChildren();$('cursor').setAttribute('x1','20');$('cursor').setAttribute('x2','20');$('success').hidden=true;status('מוכנים להקשיב?');}
  function cancel(){serial++;running=false;if(raf!==undefined)env.cancelAnimationFrame(raf);sources.forEach(s=>{try{s.stop();}catch{}});sources=[];controls();}
@@ -30,7 +30,7 @@ export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pa
  const phase=timelinePhase(time,withSinging,{slotMs,demoMs:roundDemoMs,countMs,noteCount:notes.length});
  if(phase.phase==='done'){
  running=false;controls();
- if(withSinging){round.results.forEach((r,i)=>{$('result'+i).textContent=`${noteLabel(i)} — ${r.accurate?'✓ מדויק':r.readings?'ננסה שוב':'לא זוהה קול יציב'} · ${credit(r)}`;$('result'+i).className=r.accurate?'achieved':'';});const success=round.results.every(r=>r.accurate);$('success').hidden=!success;status(success?(pattern?'יפה! שרתם את כל התבנית.':'יפה! שני הצלילים נשארו מולכם והצלחתם.'):'הניסיון הסתיים. הסתכלו על הקול שלכם ונסו שוב.');}
+ if(withSinging){round.results.forEach((r,i)=>{$('result'+i).textContent=`${noteLabel(i)} — ${r.accurate?'✓ מדויק':r.readings?'ננסה שוב':'לא זוהה קול יציב'} · ${credit(r)}`;$('result'+i).className=r.accurate?'achieved':'';});const success=round.results.every(r=>r.accurate);$('success').hidden=!success;if(success)onSuccess({root:Number($('root').value),direction:$('direction').value});status(success?(pattern?'יפה! שרתם את כל התבנית.':'יפה! שני הצלילים נשארו מולכם והצלחתם.'):'הניסיון הסתיים. הסתכלו על הקול שלכם ונסו שוב.');}
  else status('זו הדוגמה. הפעילו מיקרופון ולחצו ״האזנה ואז שירה״.');
  $('cursor').setAttribute('x1','580');$('cursor').setAttribute('x2','580');for(let i=0;i<notes.length;i++)$('target'+i).classList.remove('active');return;
  }
@@ -59,5 +59,5 @@ export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pa
  }
  $('root').innerHTML=Array.from({length:pattern?13:11},(_,i)=>`<option value="${48+i}">${title(48+i)}</option>`).join('');$('root').value='48';setup();controls();
  $('root').addEventListener('change',setup);$('direction').addEventListener('change',setup);$('demo').addEventListener('click',()=>start(false));$('start').addEventListener('click',()=>start(true));$('retry')?.addEventListener('click',()=>start(true,true));$('mic').addEventListener('click',microphone);$('stop').addEventListener('click',()=>{cancel();status('הניסיון נעצר. אפשר לנסות שוב.');});env.addEventListener('pagehide',()=>{stop();context?.close();context=undefined;});
- return {stop};
+ return {stop,setQuestion({root,direction}){if(pending||!Number.isInteger(root)||root<48||root>58||!['ascending','descending'].includes(direction))return false;cancel();$('root').value=String(root);$('direction').value=direction;setup();return true;}};
 }
