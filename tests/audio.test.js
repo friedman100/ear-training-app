@@ -34,7 +34,7 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  }
  assert.equal(notes.length,6);assert.ok(delays.includes(PLAYBACK_DURATION_MS));
  for(const type of ['descending','upDown','harmonic']){
- const count=type==='upDown'?3:2;const before=notes.length;let ready=false;
+ const count=type==='upDown'?4:2;const before=notes.length;let ready=false;
  await play(60,67,()=>{},()=>{ready=true;},type);
  assert.ok(ready);assert.equal(notes.length-before,count);
  const played=notes.slice(-count),levels=envelopes.slice(-count);

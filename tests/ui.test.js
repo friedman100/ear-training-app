@@ -220,7 +220,7 @@ test('four playback modes work in guided and free practice and survive reload wi
  for(const type of ['ascending','descending','upDown','harmonic']){
  d.querySelector('#playback-type').value=type;d.querySelector('#playback-type').dispatchEvent(new w.Event('change'));
  const before=w.playedNotes;d.querySelector('#listen').click();await flush();
- const count=type==='upDown'?3:2;assert.equal(w.playedNotes-before,count);
+ const count=type==='upDown'?4:2;assert.equal(w.playedNotes-before,count);
  if(type==='harmonic')assert.equal(w.audioSources.at(-1).startTime,w.audioSources.at(-2).startTime);
  assert.ok(!d.querySelector('[data-answer]').disabled);
  }

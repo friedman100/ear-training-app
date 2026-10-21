@@ -51,7 +51,7 @@ test('playback arrangements preserve interval pitches in every range',async()=>{
  const {playbackPlan}=await import('../src/playback-plan.js');
  for(const range of Object.keys(RANGES))for(let interval=1;interval<=12;interval++){
  const q=question([interval],range);
- for(const [type,expected] of Object.entries({ascending:[q.start,q.end],descending:[q.end,q.start],upDown:[q.start,q.end,q.start],harmonic:[q.start,q.end]})){
+ for(const [type,expected] of Object.entries({ascending:[q.start,q.end],descending:[q.end,q.start],upDown:[q.start,q.end,q.end,q.start],harmonic:[q.start,q.end]})){
  const plan=playbackPlan(q.start,q.end,type);
  assert.deepEqual(plan.map(n=>n.midi),expected);
  assert.deepEqual(plan.map(n=>n.offset),type==='harmonic'?[0,0]:expected.map((_,i)=>i*.85));
