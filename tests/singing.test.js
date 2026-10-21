@@ -35,13 +35,16 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
 let bootstrapId=0;
-async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false}={}){
+async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false,production=false,singingSaved}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
- w.document.write((await readFile('public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
+ w.document.write((await readFile(production?'public/singing/index.html':'public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
+ if(singingSaved)w.localStorage.setItem('ear-training-singing-v1',singingSaved);
+ w.localStorage.setItem('ear-training-v1','existing-interval-progress');
+ const listeners=new Map();
  let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;const played=[];
- const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(at){played.push({start:at});},stop(at){if(at!==undefined)played.at(-1).stop=at;}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
- if(bootstrap){globalThis.window=env;try{await import('../public/sing-back/app.js?bootstrap-test='+ ++bootstrapId);}finally{delete globalThis.window;}}else if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
- return {w,env,played,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
+ const env={document:w.document,Event:w.Event,localStorage:w.localStorage,location:w.location,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(at){played.push({start:at});},stop(at){if(at!==undefined)played.at(-1).stop=at;}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);}};env.parent=env;
+ if(production){globalThis.window=env;try{await import('../public/singing/experience.js?test='+ ++bootstrapId);}finally{delete globalThis.window;}}else if(bootstrap){globalThis.window=env;try{await import('../public/sing-back/app.js?bootstrap-test='+ ++bootstrapId);}finally{delete globalThis.window;}}else if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
+ return {w,env,played,emit(name){listeners.get(name)?.forEach(fn=>fn());},get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 test('mic activates only by user action; live feedback, octave success, retry and stopping work',async()=>{
@@ -192,4 +195,34 @@ test('warmup accepts 400ms accumulated accuracy while retaining the 25-cent boun
  assert.equal(outside.results[0].goodMs,0);assert.equal(outside.results[0].accurate,false);
  const pair=createTimedRound([48,50]);for(let t=5800;t<=6300;t+=50)pair.update(detected(f),t);
  assert.equal(pair.results[0].goodMs,400);assert.equal(pair.results[0].accurate,false);
+});
+
+test('production singing shows one exercise, persists chromatic settings and leaves interval progress untouched',async()=>{
+ const s=await setup({production:true}),d=s.w.document;
+ assert.equal(s.requests,0);assert.equal(s.played.length,0);assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('#timed-exercise').hidden,true);assert.equal(d.querySelector('#warmup-exercise').hidden,true);
+ d.querySelector('#target-select').value='49';d.querySelector('#target-select').dispatchEvent(new s.w.Event('change'));assert.match(d.querySelector('#target-name').textContent,/C♯3/);
+ d.querySelector('[data-exercise="timed"]').click();assert.equal(d.querySelector('#single-exercise').hidden,true);assert.equal(d.querySelector('#timed-exercise').hidden,false);
+ d.querySelector('#timed-direction').value='descending';d.querySelector('#timed-direction').dispatchEvent(new s.w.Event('change'));
+ d.querySelector('#timed-root').value='51';d.querySelector('#timed-root').dispatchEvent(new s.w.Event('change'));
+ const saved=s.w.localStorage.getItem('ear-training-singing-v1');assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');
+ const again=await setup({production:true,singingSaved:saved}),a=again.w.document;
+ assert.equal(a.querySelector('#timed-exercise').hidden,false);assert.equal(a.querySelector('#target-select').value,'49');assert.equal(a.querySelector('#timed-root').value,'51');assert.equal(a.querySelector('#timed-direction').value,'descending');assert.equal(again.requests,0);
+ a.querySelector('#next-exercise').click();assert.equal(a.querySelector('#warmup-exercise').hidden,false);assert.equal(a.querySelector('#next-exercise').hidden,true);a.querySelector('#previous-exercise').click();assert.equal(a.querySelector('#timed-exercise').hidden,false);
+ await s.w.happyDOM.close();await again.w.happyDOM.close();
+});
+test('production exercise changes and exit stop microphone and pending single-note playback',async()=>{
+ const s=await setup({production:true}),d=s.w.document;
+ d.querySelector('#mic').click();await flush();assert.equal(s.requests,1);
+ let release;s.env.fetch=()=>new Promise(resolve=>{release=()=>resolve({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});});
+ d.querySelector('#play').click();await flush();d.querySelector('[data-exercise="timed"]').click();release();await flush();assert.equal(s.played.length,0);assert.equal(s.stopped,1);
+ d.querySelector('#timed-mic').click();await flush();assert.equal(d.querySelector('#timed-retry').disabled,false);
+ d.querySelector('#timed-retry').click();await flush();s.tick(1900);assert.match(d.querySelector('#timed-phase').textContent,/עכשיו שרים/);
+ s.emit('singing-stop');assert.equal(s.stopped,2);assert.equal(d.querySelector('#timed-retry').disabled,true);assert.equal(d.querySelector('#timed-stop').hidden,true);
+ d.querySelector('[data-exercise="single"]').click();assert.equal(d.querySelector('#play').disabled,false);
+ await s.w.happyDOM.close();
+});
+test('production safely restores malformed or out-of-range settings without requesting a microphone',async()=>{
+ for(const saved of ['broken JSON',JSON.stringify({exercise:'invalid','target-select':99,'timed-root':47,'warmup-root':61,direction:'invalid'})]){
+ const s=await setup({production:true,singingSaved:saved}),d=s.w.document;assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('#target-select').value,'48');assert.equal(d.querySelector('#timed-root').value,'48');assert.equal(s.requests,0);await s.w.happyDOM.close();
+ }
 });

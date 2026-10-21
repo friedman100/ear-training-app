@@ -66,3 +66,6 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .practice .unlock-progress .progress-label{font-size:15px;font-weight:500;color:#415c38}.practice .unlock-progress .progress-label b{font-size:15px;font-weight:600;color:#415c38}
 
 .playback-setting select{max-width:165px;min-width:120px}
+
+.path-navigation{display:flex;max-width:1040px;margin:22px auto 0;width:calc(100% - 40px);gap:8px}.path-navigation button{flex:1;min-width:0;font-size:15px;border:1px solid transparent}.path-navigation button[aria-pressed=true]{background:#fff;border-color:#d2dfc9;font-weight:700;box-shadow:0 2px 5px #244f3e0a}.singing-main{padding-top:24px;max-width:1000px}.singing-main iframe{display:block;border:0;width:100%;height:1100px;background:#f7f8f4}.singing-main>.panel{padding:30px}
+@media(max-width:760px){.path-navigation{margin-top:16px;width:calc(100% - 32px);gap:4px}.path-navigation button{font-size:12px;padding:10px 6px}.singing-main{padding-top:20px}}

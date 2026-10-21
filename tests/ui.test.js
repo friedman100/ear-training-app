@@ -230,3 +230,17 @@ test('four playback modes work in guided and free practice and survive reload wi
  assert.equal(reloaded.document.querySelector('#playback-type').value,'harmonic');
  await w.happyDOM.close();await reloaded.happyDOM.close();
 });
+
+test('singing path preserves interval question, progress and summary while stopping audio on departure',async()=>{
+ const w=setup(undefined,true),d=w.document;const before=w.localStorage.getItem('ear-training-session-v1');
+ assert.ok(d.querySelector('[data-section="singing"]'));d.querySelector('#listen').click();await flush();
+ d.querySelector('[data-section="singing"]').click();const frame=d.querySelector('#singing-frame');
+ assert.ok(frame);assert.equal(new URL(frame.src).pathname,'/ear-training-app/singing/index.html');assert.equal(frame.getAttribute('allow'),'microphone');assert.equal(d.querySelector('#listen'),null);
+ const expected=w.localStorage.getItem('ear-training-session-v1');assert.equal(expected,before);
+ let stopped=0;Object.defineProperty(frame,'contentWindow',{value:{dispatchEvent(event){assert.equal(event.type,'singing-stop');stopped++;}},configurable:true});
+ d.querySelector('[data-section="intervals"]').click();assert.equal(stopped,1);assert.ok(d.querySelector('#listen'));assert.equal(w.localStorage.getItem('ear-training-session-v1'),before);
+ for(const timer of w.audioTimers)timer.fn();await flush();assert.ok(d.querySelector('#listen'));assert.equal(d.querySelector('#listen').disabled,false);
+ d.querySelector('#end-session').click();assert.ok(d.querySelector('.summary'));
+ d.querySelector('[data-section="singing"]').click();assert.ok(d.querySelector('#singing-frame'));d.querySelector('[data-section="intervals"]').click();assert.ok(d.querySelector('.summary'));
+ await w.happyDOM.close();
+});

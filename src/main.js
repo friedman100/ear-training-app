@@ -7,6 +7,23 @@ let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()
 let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='',settings=false,token=0;
 let session=loadSession(storage);
 const app=document.querySelector('#app');
+let section='intervals';
+const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button></nav>`;
+function bindPathNavigation(){document.querySelectorAll('[data-section]').forEach(button=>button.onclick=()=>{
+ if(button.dataset.section===section)return;
+ const frame=document.getElementById('singing-frame');
+ try{if(frame?.contentWindow)frame.contentWindow.dispatchEvent(new Event('singing-stop'));}catch{}
+ token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
+});}
+function renderSinging(){
+ app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
+ bindPathNavigation();
+}
+window.addEventListener('message',event=>{
+ const frame=document.getElementById('singing-frame');
+ if(!frame||event.source!==frame.contentWindow||event.origin!==location.origin||event.data?.type!=='singing-height')return;
+ const height=Number(event.data.height);if(Number.isFinite(height))frame.style.height=`${Math.max(700,Math.min(2400,height+8))}px`;
+});
 const active=()=>state.mode==='guided'?STAGES[state.stage]:state.selected;
 function saveSession(){session.current={q,mode:state.mode,range:state.range,wrong};try{storage.setItem(SESSION_KEY,JSON.stringify(session));}catch{notice='לא ניתן לשמור את התרגול בדפדפן הזה.';}}
 function save(){saveSession();try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
@@ -14,13 +31,14 @@ function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=q
 async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},state.playbackType);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
+ if(section==='singing'){renderSinging();return;}
  if(session.ended){renderSummary();return;}
  const stats=state.stats[state.mode], pct=stats.total?Math.round(100*stats.correct/stats.total):0;
  const n=windowSize(state.stage),target=Math.ceil(n*.8),correctCount=state.history.filter(h=>h.correct).length;
  const progressValue=Math.min(correctCount,target),stagePct=100*progressValue/target;
  const goal=state.stage===10?'השלמת המסלול':`ברמה הבאה - ${STAGES[state.stage+1].at(-1)===6?'יצטרף':'תצטרף'} לתרגול גם ${INTERVALS[STAGES[state.stage+1].at(-1)]}`;
  const finished=state.complete || state.partAComplete&&state.stage===4;
- app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a>${button('settings','⚙ <span>הגדרות</span>','quiet')}</header>
+ app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a>${button('settings','⚙ <span>הגדרות</span>','quiet')}</header>${pathNavigation()}
  <main><div class="intro"><h1>לשיר ולזהות מרווחים - זה הבסיס הכי חזק לשמיעה שלכם</h1><p>(גם 80% זה כבר מצב טוב מאוד למיומנות העיקרית שאתם מפתחים פה)</p></div>
  <nav aria-label="מצב תרגול">${button('guided','מסלול מודרך',state.mode==='guided'?'selected':'')}${button('free','תרגול חופשי',state.mode==='free'?'selected':'')}</nav>
  <div class="layout"><section class="practice panel ${playing?'is-playing':''}"><div class="card-top"><span class="badge">${state.mode==='guided'?`חלק ${state.stage<5?'א׳':'ב׳'} · שלב ${state.stage+1}`:'בקצב שלכם'}</span><span class="muted">פסנתר · ${PLAYBACK_TYPES[state.playbackType]}</span></div>
@@ -46,6 +64,7 @@ function render(){
  const dialogs=document.querySelectorAll("dialog");const dialog=dialogs[dialogs.length-1];if(dialog){dialog.addEventListener("cancel",e=>e.preventDefault());dialog.showModal();}
 }
 function bind(){
+ bindPathNavigation();
  const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
  on('end-session',()=>{token++;stop();busy=false;playing=false;settings=false;session.ended=true;saveSession();render();});
  on('listen',()=>listen());on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
@@ -77,8 +96,9 @@ else next();
 
 function renderSummary(){
  const pct=session.total?Math.round(100*session.correct/session.total):0;
- app.innerHTML=`<header><span class="brand"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></span></header><main class="summary"><span class="eyebrow">זמן להסתכל על ההתקדמות</span><h1>סיכום התרגול שלכם</h1><p>הנתונים מתייחסים לתרגול הנוכחי בלבד, במסלול המודרך ובמצב החופשי.</p>
+ app.innerHTML=`<header><span class="brand"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></span></header>${pathNavigation()}<main class="summary"><span class="eyebrow">זמן להסתכל על ההתקדמות</span><h1>סיכום התרגול שלכם</h1><p>הנתונים מתייחסים לתרגול הנוכחי בלבד, במסלול המודרך ובמצב החופשי.</p>
  ${session.total?`<section class="stats summary-stats" aria-label="סיכום התרגול"><div><strong>${session.total}</strong><span>מרווחים שהשלמתם</span></div><div><strong>${pct}<small>%</small></strong><span>הצלחה בניסיון הראשון</span></div><div><strong>${session.best}</strong><span>רצף ההצלחות המרבי בניסיון הראשון</span></div></section><section class="panel summary-details"><h2>ההצלחה שלכם בכל מרווח</h2><div class="summary-table"><table><thead><tr><th scope="col">מרווח</th><th scope="col">הצלחה בניסיון הראשון</th><th scope="col">הצלחות מתוך שאלות</th></tr></thead><tbody>${Object.entries(session.intervals).sort(([a],[b])=>a-b).map(([id,row])=>`<tr><th scope="row">${INTERVALS[id]}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></th><td>${Math.round(100*row.correct/row.total)}%</td><td>${row.correct} מתוך ${row.total}</td></tr>`).join('')}</tbody></table></div></section>`:`<section class="panel empty-summary" role="status"><h2>עדיין לא השלמתם שאלה בתרגול הזה</h2><p>שאלה נספרת רק אחרי שמזהים נכון את המרווח, גם אם נדרשו כמה ניסיונות. אפשר להתחיל תרגול חדש כשנוח לכם.</p></section>`}
  <section class="panel summary-unlocks"><h2>מרווחים חדשים שנפתחו</h2>${session.unlocked.length?`<ul>${session.unlocked.map(id=>`<li>${INTERVALS[id]} <span class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</span></li>`).join('')}</ul>`:'<p>לא נפתחו מרווחים חדשים במסלול המודרך במהלך התרגול הזה.</p>'}</section><p class="fine">שאלות שלא הושלמו אינן נכללות בסיכום. ההתקדמות במסלול וההגדרות שלכם שמורות.</p>${button('new-session','תרגול חדש','next')} ${notice?`<p role="alert">${notice}</p>`:''}</main>`;
+ bindPathNavigation();
  document.getElementById('new-session').onclick=()=>{session=newSession();next();};
 }

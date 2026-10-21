@@ -14,7 +14,7 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
 
  let target=48,context,stream,input,analyser,raf,micActive=false,pending=false,permissionId=0;
  let playing=false,blockedUntil=0,lastFrame=0,lastLabel='',successShown=false;
- const cache=new Map(),tracker=createTracker();
+ const cache=new Map(),tracker=createTracker();let playbackId=0,sources=[];
  const now=()=>env.performance.now();
  function audioContext(){const Audio=env.AudioContext||env.webkitAudioContext;if(!Audio)throw new Error('unsupported');context??=new Audio();return context;}
  function label(text){if(lastLabel!==text){$('feedback-label').textContent=text;lastLabel=text;}}
@@ -52,7 +52,7 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  if(micActive){stopMic();return;}
  if(pending)return;
  $('error').hidden=true;
- if(!env.isSecureContext||!env.navigator.mediaDevices?.getUserMedia){$('error').textContent='המיקרופון דורש פתיחה דרך קישור HTTPS בדפדפן תומך. פתחו את כתובת האבטיפוס באתר, ולא קובץ מקומי.';$('error').hidden=false;return;}
+ if(!env.isSecureContext||!env.navigator.mediaDevices?.getUserMedia){$('error').textContent='המיקרופון דורש פתיחה דרך קישור HTTPS בדפדפן תומך. פתחו את האפליקציה באתר, ולא קובץ מקומי.';$('error').hidden=false;return;}
  onMicStart();
  pending=true;const request=++permissionId;$('mic').disabled=true;$('mic-state').textContent='ממתין לאישור שלכם…';
  try{
@@ -70,21 +70,22 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  }
  async function playTarget(){
  if(playing)return;
- playing=true;blockedUntil=Infinity;reset();$('error').hidden=true;
+ const request=++playbackId;playing=true;blockedUntil=Infinity;reset();$('error').hidden=true;
  ['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=true);$('play').textContent='משמיע…';clearReading('הקשיבו לפסנתר…');
- const finish=()=>{playing=false;blockedUntil=now()+350;tracker.reset();['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה חוזרת';clearReading(micActive?'עוד רגע — תכף אפשר לשיר':pair?'הפעילו מיקרופון ושירו את שני הצלילים':'הפעילו מיקרופון ושירו את הצליל');};
+ const finish=()=>{if(request!==playbackId)return;sources=[];playing=false;blockedUntil=now()+350;tracker.reset();['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה חוזרת';clearReading(micActive?'עוד רגע — תכף אפשר לשיר':pair?'הפעילו מיקרופון ושירו את שני הצלילים':'הפעילו מיקרופון ושירו את הצליל');};
  try{
  const ctx=audioContext();await ctx.resume();
  const notes=sequence();
  await Promise.all(notes.map(async midi=>{if(cache.has(midi))return;const response=await env.fetch(`../audio/${midi}.mp3`);if(!response.ok)throw new Error('audio');cache.set(midi,await ctx.decodeAudioData(await response.arrayBuffer()));}));
+ if(request!==playbackId)return;
  const start=ctx.currentTime+.03;
  notes.forEach((midi,i)=>{
  const source=ctx.createBufferSource(),gain=ctx.createGain(),at=start+i*.85;
- source.buffer=cache.get(midi);source.connect(gain);gain.connect(ctx.destination);
+ sources.push(source);source.buffer=cache.get(midi);source.connect(gain);gain.connect(ctx.destination);
  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(1,at+.015);gain.gain.setValueAtTime(1,at+.5);gain.gain.exponentialRampToValueAtTime(.35,at+.8);gain.gain.exponentialRampToValueAtTime(.0001,at+2.18);gain.gain.linearRampToValueAtTime(0,at+2.2);
  if(i===notes.length-1)source.onended=finish;source.start(at);source.stop(at+2.2);
  });
- }catch{finish();$('error').textContent='לא הצלחנו להשמיע את הפסנתר. בדקו את החיבור ונסו שוב.';$('error').hidden=false;}
+ }catch{if(request!==playbackId)return;finish();$('error').textContent='לא הצלחנו להשמיע את הפסנתר. בדקו את החיבור ונסו שוב.';$('error').hidden=false;}
  }
  $('mic').addEventListener('click',toggleMic);$('play').addEventListener('click',playTarget);
  $('retry').addEventListener('click',()=>{reset();if(micActive)blockedUntil=0;});
@@ -93,8 +94,9 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  if(pair)$('direction').addEventListener('change',()=>{direction=$('direction').value;reset();});
  $('next').addEventListener('click',()=>{const options=targets.filter(n=>n!==target);target=options[Math.floor(Math.random()*options.length)];$('target-select').value=String(target);$('play').textContent=pair?'▶ האזנה לשני הצלילים':'▶ האזנה לצליל';reset();});
  showTarget();
- env.addEventListener('pagehide',()=>{stopMic();context?.close();context=undefined;});
+ function stop(){playbackId++;sources.forEach(source=>{source.onended=null;try{source.stop();}catch{}});sources=[];playing=false;blockedUntil=0;['play','next','retry','target-select',...(pair?['direction']:[])].forEach(id=>$(id).disabled=false);$('play').textContent='▶ האזנה לצליל';stopMic();}
+ env.addEventListener('pagehide',()=>{stop();context?.close();context=undefined;});
  // No storage, microphone request or sound is started on page load.
- return {stop:stopMic};
+ return {stop};
 }
-if(typeof window!=='undefined'&&window.document?.getElementById('mic')){let single,two,warmup;single=createPrototype(window,{onMicStart:()=>{two?.stop();warmup?.stop();}});if(window.document.getElementById('timed-mic'))two=createTimedPair(window,{onActivate:()=>{single.stop();warmup?.stop();}});if(window.document.getElementById('warmup-mic'))warmup=createTimedPair(window,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING,onActivate:()=>{single.stop();two?.stop();}});}
+if(typeof window!=='undefined'&&window.document?.getElementById('mic')&&!window.document.documentElement.hasAttribute('data-singing-production')){let single,two,warmup;single=createPrototype(window,{onMicStart:()=>{two?.stop();warmup?.stop();}});if(window.document.getElementById('timed-mic'))two=createTimedPair(window,{onActivate:()=>{single.stop();warmup?.stop();}});if(window.document.getElementById('warmup-mic'))warmup=createTimedPair(window,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING,onActivate:()=>{single.stop();two?.stop();}});}
