@@ -10,7 +10,7 @@ function setup(saved,controlled=false,sessionSaved){
  if(sessionSaved)w.localStorage.setItem('ear-training-session-v1',sessionSaved);
  if(saved)w.localStorage.setItem('ear-training-v1',saved);
  w.structuredClone=structuredClone;w.playedNotes=0;w.audioSources=[];w.audioTimers=[];
- w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(){w.playedNotes++;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
+ w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const source={connect(){},start(t){w.playedNotes++;this.startTime=t;},stop(){}};w.audioSources.push(source);return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
  w.setTimeout=(fn,ms)=>{if(controlled)w.audioTimers.push({fn,ms});else queueMicrotask(fn);return 1;};
  w.eval(source);return w;
@@ -208,4 +208,25 @@ test('live session counter shows completed first-attempt successes and resets fo
  d.querySelector('#end-session').click();d.querySelector('#new-session').click();
  assert.ok(d.querySelector('.session-counter').textContent.includes('0 מתוך 0 נכונים'));
  await w.happyDOM.close();
+});
+
+test('four playback modes work in guided and free practice and survive reload without clearing progress',async()=>{
+ const {initialState}=await import('../src/logic.js');
+ const saved=initialState();saved.stage=2;saved.stats.guided.total=24;
+ const w=setup(JSON.stringify(saved)),d=w.document;
+ assert.equal(d.querySelectorAll('#playback-type option').length,4);
+ for(const mode of ['guided','free']){
+ d.querySelector(`#${mode}`).click();
+ for(const type of ['ascending','descending','upDown','harmonic']){
+ d.querySelector('#playback-type').value=type;d.querySelector('#playback-type').dispatchEvent(new w.Event('change'));
+ const before=w.playedNotes;d.querySelector('#listen').click();await flush();
+ const count=type==='upDown'?3:2;assert.equal(w.playedNotes-before,count);
+ if(type==='harmonic')assert.equal(w.audioSources.at(-1).startTime,w.audioSources.at(-2).startTime);
+ assert.ok(!d.querySelector('[data-answer]').disabled);
+ }
+ }
+ const data=stored(w);assert.equal(data.playbackType,'harmonic');assert.equal(data.stage,2);assert.equal(data.stats.guided.total,24);
+ const reloaded=setup(w.localStorage.getItem('ear-training-v1'),false,w.localStorage.getItem('ear-training-session-v1'));
+ assert.equal(reloaded.document.querySelector('#playback-type').value,'harmonic');
+ await w.happyDOM.close();await reloaded.happyDOM.close();
 });

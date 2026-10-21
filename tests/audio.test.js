@@ -33,5 +33,15 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  assert.ok(10+PLAYBACK_DURATION_MS/1000>=second.stopTime);
  }
  assert.equal(notes.length,6);assert.ok(delays.includes(PLAYBACK_DURATION_MS));
+ for(const type of ['descending','upDown','harmonic']){
+ const count=type==='upDown'?3:2;const before=notes.length;let ready=false;
+ await play(60,67,()=>{},()=>{ready=true;},type);
+ assert.ok(ready);assert.equal(notes.length-before,count);
+ const played=notes.slice(-count),levels=envelopes.slice(-count);
+ const offsets=played.map(note=>Number((note.startTime-played[0].startTime).toFixed(2)));
+ assert.deepEqual(offsets,type==='harmonic'?[0,0]:Array.from({length:count},(_,i)=>i*.85));
+ assert.ok(delays.at(-1)/1000+10>=played.at(-1).stopTime);
+ assert.equal(levels[0][1].v,type==='harmonic'?.7:1);
+ }
  }finally{Object.assign(globalThis,original);}
 });

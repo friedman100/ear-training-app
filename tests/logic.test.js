@@ -46,3 +46,20 @@ test('storage round trips and safely recovers from bad data',()=>{
  for(const value of ['bad','null','{}',JSON.stringify({...s,selected:[]}),JSON.stringify({...s,stage:99})])assert.deepEqual(load({getItem:()=>value}),initialState());
 });
 test('audio timing retains note body and onset spacing',()=>{assert.equal(NOTE_DURATION,.8);assert.equal(NOTE_GAP,.05);});
+
+test('playback arrangements preserve interval pitches in every range',async()=>{
+ const {playbackPlan}=await import('../src/playback-plan.js');
+ for(const range of Object.keys(RANGES))for(let interval=1;interval<=12;interval++){
+ const q=question([interval],range);
+ for(const [type,expected] of Object.entries({ascending:[q.start,q.end],descending:[q.end,q.start],upDown:[q.start,q.end,q.start],harmonic:[q.start,q.end]})){
+ const plan=playbackPlan(q.start,q.end,type);
+ assert.deepEqual(plan.map(n=>n.midi),expected);
+ assert.deepEqual(plan.map(n=>n.offset),type==='harmonic'?[0,0]:expected.map((_,i)=>i*.85));
+ }
+ }
+});
+test('existing progress migrates to ascending without resetting and saves playback preference',()=>{
+ const original=initialState();delete original.playbackType;original.stage=3;original.stats.guided.total=44;
+ const migrated=load({getItem:()=>JSON.stringify(original)});assert.equal(migrated.playbackType,'ascending');assert.equal(migrated.stage,3);assert.equal(migrated.stats.guided.total,44);
+ migrated.playbackType='harmonic';assert.deepEqual(load({getItem:()=>JSON.stringify(migrated)}),migrated);
+});

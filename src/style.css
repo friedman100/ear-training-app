@@ -64,3 +64,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .practice .unlock-progress{max-width:420px;margin:24px auto 0;padding:0;background:transparent;border:0;border-radius:0;text-align:right}.practice .unlock-progress .progress-label{font-size:11px;color:#7a8d70;align-items:center}.practice .unlock-progress .progress-label b{font-size:11px;font-weight:400;color:#87967f}.practice .unlock-progress .track{height:5px;margin:7px 0 0;background:#ecf0e7}.practice .unlock-progress .track i{background:#8aa87a}.practice .unlock-progress .success-text{font-size:12px;text-align:center}
 
 .practice .unlock-progress .progress-label{font-size:15px;font-weight:500;color:#415c38}.practice .unlock-progress .progress-label b{font-size:15px;font-weight:600;color:#415c38}
+
+.playback-setting select{max-width:165px;min-width:120px}
