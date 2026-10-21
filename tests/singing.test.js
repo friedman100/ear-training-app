@@ -34,12 +34,13 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.ok(Math.abs(tracker.update(detected(146.83),48,250).cents)<1);
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
+let bootstrapId=0;
 async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
  w.document.write((await readFile('public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
  let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;const played=[];
  const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(at){played.push({start:at});},stop(at){if(at!==undefined)played.at(-1).stop=at;}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
- if(bootstrap){globalThis.window=env;try{await import('../public/sing-back/app.js?bootstrap-test');}finally{delete globalThis.window;}}else if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
+ if(bootstrap){globalThis.window=env;try{await import('../public/sing-back/app.js?bootstrap-test='+ ++bootstrapId);}finally{delete globalThis.window;}}else if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],...WARMUP_TIMING});else if(timed)createTimedPair(env);else createPrototype(env);
  return {w,env,played,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
@@ -154,11 +155,26 @@ test('short warmup uses its own timing and accuracy threshold without changing t
  const s=await setup({bootstrap:true}),d=s.w.document;
  d.querySelector('#warmup-demo').click();await flush();
  assert.equal(s.played.length,4);
- for(let i=0;i<4;i++){assert.ok(Math.abs(s.played[i].start-(.05+i*1.5))<1e-8);assert.ok(Math.abs(s.played[i].stop-s.played[i].start-(2.2*1500/1800))<1e-8);}
+ for(let i=0;i<4;i++){assert.ok(Math.abs(s.played[i].start-(.05+i*1.5))<1e-8);assert.ok(Math.abs(s.played[i].stop-s.played[i].start-1.8)<1e-8);}
  s.tick(800);assert.ok(d.querySelector('#warmup-target0').classList.contains('active'));assert.ok(Math.abs(+d.querySelector('#warmup-cursor').getAttribute('x1')-90)<1e-8);
  s.tick(1550);assert.ok(d.querySelector('#warmup-target1').classList.contains('active'));
  s.tick(6350);assert.ok(d.querySelector('#warmup-stop').hidden===false);
  s.tick(6500);assert.equal(d.querySelector('#warmup-stop').hidden,true);
- assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=warmup-1500-v5/);
+ assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=warmup-sustain-v6/);
  await s.w.happyDOM.close();
  });
+
+test('warmup retry skips piano, counts in, clears previous results and scores a fresh round',async()=>{
+ const s=await setup({bootstrap:true}),d=s.w.document,retry=d.querySelector('#warmup-retry');
+ assert.equal(retry.disabled,true);retry.click();await flush();assert.equal(s.requests,0);
+ d.querySelector('#warmup-mic').click();await flush();assert.equal(retry.disabled,false);
+ retry.click();await flush();assert.equal(s.played.length,0);assert.equal(retry.disabled,true);
+ s.tick(100);assert.match(d.querySelector('#warmup-phase').textContent,/מתכוננים/);
+ const frequencies=[130.8128,146.8324,164.8138,146.8324];
+ for(let t=1850;t<7850;t+=50){s.setSignal(tone(frequencies[Math.floor((t-1850)/1500)]));s.tick(t);}
+ s.tick(7900);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.equal(retry.disabled,false);
+ retry.click();await flush();assert.equal(d.querySelector('#warmup-success').hidden,true);assert.equal(d.querySelector('#warmup-trace').childElementCount,0);assert.equal(s.played.length,0);
+ s.tick(9800);assert.match(d.querySelector('#warmup-result0').textContent,/מתוך/);
+ d.querySelector('#warmup-stop').click();assert.equal(retry.disabled,false);
+ d.querySelector('#warmup-mic').click();assert.equal(retry.disabled,true);await s.w.happyDOM.close();
+});

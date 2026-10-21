@@ -1,4 +1,4 @@
-import {createTracker,centsFromTarget} from './pitch.js?v=warmup-1500-v5';
+import {createTracker,centsFromTarget} from './pitch.js?v=warmup-sustain-v6';
 export const WARMUP_TIMING=Object.freeze({slotMs:1500,demoMs:6400,countMs:1800,requiredMs:600});
 export const SLOT_MS=1800,DEMO_MS=4000,COUNT_MS=1800;
 export function timelinePhase(elapsed,withSinging=true,{slotMs=SLOT_MS,demoMs=DEMO_MS,countMs=COUNT_MS,noteCount=2}={}){
