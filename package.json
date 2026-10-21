@@ -7,12 +7,13 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node tests/logic.test.js && node tests/session.test.js && node tests/audio.test.js",
+    "test": "node tests/logic.test.js && node tests/session.test.js && node tests/audio.test.js && node tests/singing.test.js",
     "standalone": "npm run build && node scripts/standalone.mjs",
     "test:ui": "npm run build && node tests/ui.test.js",
     "test:standalone": "npm run standalone && node tests/standalone.test.js",
     "comparison": "node scripts/package-piano-comparison.mjs",
-    "test:comparison": "npm run comparison && node tests/comparison.test.js"
+    "test:comparison": "npm run comparison && node tests/comparison.test.js",
+    "test:singing": "node tests/singing.test.js"
   },
   "devDependencies": {
     "happy-dom": "^21.0.3",
