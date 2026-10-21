@@ -60,14 +60,13 @@ export function createSingingExperience(env=window){
   doc.querySelectorAll('[data-warmup-step]').forEach(button=>{const step=Number(button.dataset.warmupStep),unavailable=!patternAvailable(step);button.disabled=unavailable||warmupBusy;button.setAttribute('aria-current',step===index?'step':'false');button.querySelector('small').textContent=!guided()?(step===index?'בתרגול':'לתרגול'):unavailable?'בהמשך המסלול':step<completed?'✓ הושלם':step===index?'בתרגול':'חדש · התבנית נפתחה';});
   $('next-warmup-pattern').hidden=index===4;$('next-warmup-pattern').disabled=warmupBusy||!patternAvailable(index+1);
   $('warmup-course-complete').hidden=!guided()||completed!==5;
-  $('warmup-success-title').textContent=`כל הכבוד! שרתם ${warmupPattern.name}`;
-  $('warmup-success-detail').textContent=!guided()?'אפשר להמשיך לתבנית אחרת או לנסות שוב.':index===4?'השלמתם את כל תבניות החימום. אפשר לחזור ולתרגל שוב.':index<completed?`התבנית הבאה פתוחה: ${WARMUP_PATTERNS[index+1].name}`:'הצלחתם לשיר את כל הצלילים בתבנית.';
+  $('warmup-success-title').textContent='כל הכבוד! שרתם נכון';
+  $('warmup-success-detail').textContent=!guided()?'אפשר להמשיך לתרגל או לנסות שוב.':index===4?'השלמתם את תרגילי החימום!':index<completed?'אפשר לעבור לרמה הבאה.':'הצלחתם לשיר נכון.';
  }
  function onWarmupSuccess(){
   if(guided()&&accessible('warmup')&&current==='warmup'){
    const updated=completeWarmup(warmupProgress),opened=updated!==warmupProgress;warmupProgress=updated;
    if(opened)persist(WARMUP_KEY,warmupProgress);updateWarmupProgress();
-   if(opened&&warmupProgress.current<4)$('warmup-success-detail').textContent=`נפתחה לכם התבנית הבאה: ${WARMUP_PATTERNS[warmupProgress.current+1].name}`;
   }else updateWarmupProgress();
   $('warmup-success').classList.remove('celebrate');void $('warmup-success').offsetWidth;$('warmup-success').classList.add('celebrate');resize();
   const reveal=()=>{if(!$('warmup-success').hidden)$('warmup-success').scrollIntoView?.({behavior:env.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'auto':'smooth',block:'center'});};
