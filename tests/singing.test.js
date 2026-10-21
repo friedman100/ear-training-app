@@ -160,7 +160,7 @@ test('short warmup uses its own timing and accuracy threshold without changing t
  s.tick(1550);assert.ok(d.querySelector('#warmup-target1').classList.contains('active'));
  s.tick(6350);assert.ok(d.querySelector('#warmup-stop').hidden===false);
  s.tick(6500);assert.equal(d.querySelector('#warmup-stop').hidden,true);
- assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=warmup-sustain-v6/);
+ assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=warmup-hold400-v7/);
  await s.w.happyDOM.close();
  });
 
@@ -177,4 +177,19 @@ test('warmup retry skips piano, counts in, clears previous results and scores a 
  s.tick(9800);assert.match(d.querySelector('#warmup-result0').textContent,/מתוך/);
  d.querySelector('#warmup-stop').click();assert.equal(retry.disabled,false);
  d.querySelector('#warmup-mic').click();assert.equal(retry.disabled,true);await s.w.happyDOM.close();
+});
+
+test('warmup accepts 400ms accumulated accuracy while retaining the 25-cent boundary and pair threshold',()=>{
+ assert.equal(WARMUP_TIMING.requiredMs,400);
+ const start=WARMUP_TIMING.demoMs+WARMUP_TIMING.countMs;
+ const round=createTimedRound([48,50,52,50],WARMUP_TIMING);
+ const f=130.8128;
+ // Two accurate segments separated by a brief out-of-range wobble.
+ for(let t=0;t<=600;t+=50){const cents=t===300?35:20;round.update(detected(f*2**(cents/1200)),start+t);}
+ assert.equal(round.results[0].goodMs,400);assert.equal(round.results[0].accurate,true);
+ const outside=createTimedRound([48,50,52,50],WARMUP_TIMING);
+ for(let t=0;t<=1400;t+=50)outside.update(detected(f*2**(26/1200)),start+t);
+ assert.equal(outside.results[0].goodMs,0);assert.equal(outside.results[0].accurate,false);
+ const pair=createTimedRound([48,50]);for(let t=5800;t<=6300;t+=50)pair.update(detected(f),t);
+ assert.equal(pair.results[0].goodMs,400);assert.equal(pair.results[0].accurate,false);
 });
