@@ -48,6 +48,7 @@ export function createSingingExperience(env=window){
   const bar=$('pair-progress-bar');bar.setAttribute('aria-valuenow',String(count));bar.querySelector('span').style.width=`${count*25}%`;
   $('pair-direction-label').textContent=guided()?`זוג ${pairProgress.index+1} מתוך 4 · ${q.direction==='ascending'?'עלייה':'ירידה'}`:'בחרו כיוון וגובה שנוחים לכם';
   $('next-pair').hidden=!guided()||count===4;$('next-pair').disabled=pairBusy||count<=pairProgress.index;
+  $('next-pair').classList.toggle('pair-ready',guided()&&count<4&&count>pairProgress.index&&!pairBusy);
   $('pair-stage-complete').hidden=!guided()||count!==4;
  }
  function onPairSuccess(question){if(!guided())return;const updated=completePair(pairProgress,question);if(updated===pairProgress)return;pairProgress=updated;persist(PAIR_KEY,pairProgress);updatePairProgress();updateProgress();resize();}

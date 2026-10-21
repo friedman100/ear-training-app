@@ -283,13 +283,13 @@ test('pair preparation excludes partial, stopped and repeated rounds, restores p
   for(let t=start;t<start+3600;t+=50){const step=Math.floor((t-start)/1800),note=notes[step]+(!good&&step===1?1:0);s.setSignal(tone(440*2**((note-69)/12)));s.tick(t);}
   time=start+3650;s.tick(time);
  }
- await round(false);assert.equal(progress().completed,0);assert.equal(d.querySelector('#next-pair').disabled,true);
+ await round(false);assert.equal(progress().completed,0);assert.equal(d.querySelector('#next-pair').disabled,true);assert.equal(d.querySelector('#next-pair').classList.contains('pair-ready'),false);
  d.querySelector('#timed-retry').click();await flush();s.tick(time+=1900);d.querySelector('#timed-stop').click();assert.equal(progress().completed,0);
  for(let i=0;i<4;i++){
-  assert.equal(d.querySelector('#timed-direction').value,i<2?'ascending':'descending');await round();assert.equal(progress().completed,i+1);
+  assert.equal(d.querySelector('#timed-direction').value,i<2?'ascending':'descending');await round();assert.equal(progress().completed,i+1);assert.equal(d.querySelector('#next-pair').classList.contains('pair-ready'),i<3);
   if(i===0){await round();assert.equal(progress().completed,1);}
   if(i===1){const p=progress();await s.w.happyDOM.close();s=await setup({production:true,singingProgress:finishedSinging,pairProgress:p,singingSaved:JSON.stringify({exercise:'timed'})});d=s.w.document;time=0;assert.equal(progress().completed,2);assert.equal(d.querySelector('#next-pair').disabled,false);assert.equal(d.querySelector('[data-exercise="warmup"]').disabled,true);d.querySelector('#timed-mic').click();await flush();}
-  if(i<3){d.querySelector('#next-pair').click();assert.equal(progress().index,i+1);assert.equal(d.querySelector('#next-pair').disabled,true);}
+  if(i<3){d.querySelector('#next-pair').click();assert.equal(progress().index,i+1);assert.equal(d.querySelector('#next-pair').disabled,true);assert.equal(d.querySelector('#next-pair').classList.contains('pair-ready'),false);}
  }
  assert.equal(d.querySelector('#pair-stage-complete').hidden,false);assert.equal(d.querySelector('#timed-exercise').hidden,false);assert.equal(d.querySelector('[data-exercise="warmup"]').disabled,false);assert.equal(d.querySelector('#next-pair').hidden,true);
  d.querySelector('#open-warmup').click();assert.equal(d.querySelector('#warmup-exercise').hidden,false);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');assert.equal(JSON.parse(s.w.localStorage.getItem(PROGRESS_KEY)).completed,10);

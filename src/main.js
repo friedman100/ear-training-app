@@ -16,7 +16,7 @@ function bindPathNavigation(){document.querySelectorAll('[data-section]').forEac
  token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
 });}
 function renderSinging(){
- app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1&v=singing-modes-6" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
+ app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1&v=pair-next-7" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
  bindPathNavigation();
 }
 window.addEventListener('message',event=>{
