@@ -1,8 +1,9 @@
-import {WARMUP_PATTERNS} from './warmup-patterns.js?v=singing-patterns-4';
-import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-patterns-4';
-import {PROGRESS_KEY,loadProgress,completeTarget,nextTarget,solved} from './progression.js?v=singing-patterns-4';
-import {createPrototype} from '../sing-back/app.js?v=singing-patterns-4';
-import {createTimedPair} from '../sing-back/timed-pair.js?v=singing-patterns-4';
+import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from './warmup-progression.js?v=singing-warmup-stages-5';
+import {WARMUP_PATTERNS} from './warmup-patterns.js?v=singing-warmup-stages-5';
+import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-warmup-stages-5';
+import {PROGRESS_KEY,loadProgress,completeTarget,nextTarget,solved} from './progression.js?v=singing-warmup-stages-5';
+import {createPrototype} from '../sing-back/app.js?v=singing-warmup-stages-5';
+import {createTimedPair} from '../sing-back/timed-pair.js?v=singing-warmup-stages-5';
 import {WARMUP_TIMING} from '../sing-back/timeline.js?v=warmup-hold400-v7';
 
 export const SINGING_KEY='ear-training-singing-v1';
@@ -11,7 +12,8 @@ export function createSingingExperience(env=window){
  const fields={'target-select':[48,60],'timed-root':[48,58],'warmup-root':[48,60]};
  let storage;try{storage=env.localStorage;}catch{}
  let saved={};try{saved=JSON.parse(storage?.getItem(SINGING_KEY)||'{}')||{};}catch{}
- let warmupPattern=WARMUP_PATTERNS.find(p=>p.id===saved.warmupPattern)||WARMUP_PATTERNS[0],warmupBusy=false;
+ let warmupProgress=loadWarmupProgress(storage);
+ let warmupPattern=WARMUP_PATTERNS[warmupProgress.current],warmupBusy=false;
  let progress=loadProgress(storage),pairProgress=loadPairProgress(storage),pairBusy=false;
  const accessible=id=>id==='single'||progress.completed===10&&(id!=='warmup'||pairProgress.completed===4);
  let current=ids.includes(saved.exercise)&&accessible(saved.exercise)?saved.exercise:saved.exercise==='warmup'&&progress.completed===10?'timed':'single';
@@ -35,11 +37,22 @@ export function createSingingExperience(env=window){
   doc.getElementById('pair-stage-complete').hidden=count!==4;
  }
  function onPairSuccess(question){const updated=completePair(pairProgress,question);if(updated===pairProgress)return;pairProgress=updated;savePairProgress();updatePairProgress();updateProgress();resize();}
+ function saveWarmupProgress(){try{storage?.setItem(WARMUP_KEY,JSON.stringify(warmupProgress));}catch{doc.getElementById('singing-storage-error').hidden=false;}}
+ function updateWarmupProgress(){
+  const {completed,current:index}=warmupProgress;
+  doc.getElementById('warmup-progress-label').textContent=`השלמתם ${completed} מתוך 5 תבניות`;
+  doc.getElementById('warmup-current-label').textContent=`תבנית ${index+1} מתוך 5`;
+  const bar=doc.getElementById('warmup-progress-bar');bar.setAttribute('aria-valuenow',String(completed));bar.querySelector('span').style.width=`${completed*20}%`;
+  doc.querySelectorAll('[data-warmup-step]').forEach(button=>{const step=Number(button.dataset.warmupStep),locked=!canOpenWarmup(warmupProgress,step);button.disabled=locked||warmupBusy;button.setAttribute('aria-current',step===index?'step':'false');button.querySelector('small').textContent=locked?'נעול — השלימו את התבנית הקודמת':step<completed?'✓ הושלם':step===index?'בתרגול':'נפתח — אפשר להמשיך';});
+  doc.getElementById('next-warmup-pattern').hidden=index===4;doc.getElementById('next-warmup-pattern').disabled=warmupBusy||!canOpenWarmup(warmupProgress,index+1);
+  doc.getElementById('warmup-course-complete').hidden=completed!==5;
+ }
+ function onWarmupSuccess(){if(!accessible('warmup')||current!=='warmup')return;const updated=completeWarmup(warmupProgress);if(updated===warmupProgress)return;warmupProgress=updated;saveWarmupProgress();updateWarmupProgress();resize();}
  const controllers=[];
  const stopAll=()=>controllers.forEach(controller=>controller.stop());
  controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true}));
  controllers.push(createTimedPair(env,{onSuccess:onPairSuccess,onBusyChange:value=>{pairBusy=value;updatePairProgress();},onActivate:()=>{controllers[0].stop();controllers[2]?.stop();}}));
- controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,demoMs:warmupPattern.offsets.length*WARMUP_TIMING.slotMs+400,onBusyChange:value=>{warmupBusy=value;doc.getElementById('warmup-pattern').disabled=value;doc.getElementById('next-warmup-pattern').disabled=value||warmupPattern===WARMUP_PATTERNS.at(-1);},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
+ controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,demoMs:warmupPattern.offsets.length*WARMUP_TIMING.slotMs+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
  for(const [id,[min,max]] of Object.entries(fields)){
   if(id==='target-select'||id==='timed-root'||id==='warmup-root')continue;const value=saved[id];if(Number.isInteger(value)&&value>=min&&value<=max){doc.getElementById(id).value=String(value);doc.getElementById(id).dispatchEvent(new env.Event('change'));}
  }
@@ -71,12 +84,12 @@ export function createSingingExperience(env=window){
  const observer=env.ResizeObserver?new env.ResizeObserver(resize):null;observer?.observe(doc.body);
  env.addEventListener('pagehide',()=>observer?.disconnect());
  if(new URLSearchParams(env.location.search).get('embedded')==='1')doc.body.classList.add('embedded');
-  const patternSelect=doc.getElementById('warmup-pattern');
- patternSelect.innerHTML=WARMUP_PATTERNS.map((p,i)=>`<option value="${p.id}">${i+1}. ${p.name}</option>`).join('');patternSelect.value=warmupPattern.id;
- function choosePattern(id){const selected=WARMUP_PATTERNS.find(p=>p.id===id);if(!selected||warmupBusy||!controllers[2].setPattern(selected.offsets)){patternSelect.value=warmupPattern.id;return;}warmupPattern=selected;patternSelect.value=selected.id;doc.getElementById('warmup-pattern-name').textContent=selected.name;doc.getElementById('warmup-success').textContent='✓ הצלחתם לשיר '+selected.name+'!';doc.getElementById('next-warmup-pattern').disabled=selected===WARMUP_PATTERNS.at(-1);save();resize();}
- patternSelect.addEventListener('change',()=>choosePattern(patternSelect.value));
- doc.getElementById('next-warmup-pattern').addEventListener('click',()=>choosePattern(WARMUP_PATTERNS[WARMUP_PATTERNS.indexOf(warmupPattern)+1]?.id));
- choosePattern(warmupPattern.id);
+ const steps=doc.getElementById('warmup-steps');
+ steps.innerHTML=WARMUP_PATTERNS.map((p,i)=>`<button data-warmup-step="${i}" aria-current="false"><span>${i+1}. ${p.name}</span><small></small></button>`).join('');
+ function choosePattern(index){if(!canOpenWarmup(warmupProgress,index)||warmupBusy)return;const selected=WARMUP_PATTERNS[index];if(!controllers[2].setPattern(selected.offsets))return;warmupProgress={...warmupProgress,current:index};warmupPattern=selected;doc.getElementById('warmup-pattern-name').textContent=selected.name;doc.getElementById('warmup-success').textContent='✓ הצלחתם לשיר '+selected.name+'!';saveWarmupProgress();updateWarmupProgress();save();resize();}
+ steps.querySelectorAll('[data-warmup-step]').forEach(button=>button.addEventListener('click',()=>choosePattern(Number(button.dataset.warmupStep))));
+ doc.getElementById('next-warmup-pattern').addEventListener('click',()=>choosePattern(warmupProgress.current+1));
+ choosePattern(warmupProgress.current);
  controllers[0].setTarget(progress.notes[progress.index]);controllers[1].setQuestion(pairProgress.questions[pairProgress.index]);updatePairProgress();updateProgress();saveProgress();savePairProgress();show(current,false,false);
  return {stop:stopAll,show};
 }

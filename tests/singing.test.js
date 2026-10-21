@@ -1,3 +1,4 @@
+import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from '../public/singing/warmup-progression.js';
 import {WARMUP_PATTERNS} from '../public/singing/warmup-patterns.js';
 import {PAIR_KEY,newPairProgress,loadPairProgress,completePair,nextPair} from '../public/singing/pair-progression.js';
 import {PROGRESS_KEY,NATURALS,newProgress,loadProgress,completeTarget,nextTarget} from '../public/singing/progression.js';
@@ -38,9 +39,10 @@ test('single-frame pitch outliers are smoothed and uncertain detections show lis
  assert.equal(tracker.update({frequency:130.8128,confidence:.4},48,300).reliable,false);
 });
 let bootstrapId=0;
-async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false,production=false,singingSaved,singingProgress,pairProgress}={}){
+async function setup({secure=true,deny=false,timed=false,warmup=false,bootstrap=false,production=false,singingSaved,singingProgress,pairProgress,warmupProgress}={}){
  const w=new Window({url:'https://example.test/ear-training-app/sing-back/'});
  w.document.write((await readFile(production?'public/singing/index.html':'public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
+ if(warmupProgress)w.localStorage.setItem(WARMUP_KEY,JSON.stringify(warmupProgress));
  if(pairProgress)w.localStorage.setItem(PAIR_KEY,JSON.stringify(pairProgress));
  if(singingProgress)w.localStorage.setItem(PROGRESS_KEY,JSON.stringify(singingProgress));
  if(singingSaved)w.localStorage.setItem('ear-training-singing-v1',singingSaved);
@@ -299,24 +301,45 @@ test('five fixed C warmups play exact notes, rebuild charts, score every slot an
  const expected=[[48,50,52,50],[48,50,52,55],[48,50,52,53,55,53,52,50,48],[48,52,55,52,48],[48,52,50,53,52,55,60]];
  assert.deepEqual(WARMUP_PATTERNS.map(p=>p.offsets.map(n=>48+n)),expected);
  const s=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:JSON.stringify({exercise:'warmup','warmup-root':50})}),d=s.w.document;let time=0;
- assert.equal(d.querySelector('#warmup-pattern').options.length,5);assert.equal(d.querySelector('#warmup-root').closest('.timed-options').hidden,true);assert.equal(d.querySelector('#warmup-root').value,'48');
+ assert.equal(d.querySelector('#warmup-pattern'),null);assert.equal(d.querySelectorAll('[data-warmup-step]').length,5);assert.equal(d.querySelector('#warmup-root').closest('.timed-options').hidden,true);assert.equal(d.querySelector('#warmup-root').value,'48');
  d.querySelector('#warmup-mic').click();await flush();
  for(let i=0;i<5;i++){
-  const notes=expected[i],selector=d.querySelector('#warmup-pattern');selector.value=WARMUP_PATTERNS[i].id;selector.dispatchEvent(new s.w.Event('change'));
-  assert.equal(d.querySelectorAll('#warmup-chart rect').length,notes.length);assert.equal(d.querySelectorAll('#warmup-exercise .timed-results span').length,notes.length);assert.equal(d.querySelector('#warmup-pattern-name').textContent,WARMUP_PATTERNS[i].name);
+  const notes=expected[i],selector=d.querySelector('[data-warmup-step="'+i+'"]');selector.click();
+  assert.equal(d.querySelectorAll('#warmup-chart rect').length,notes.length);assert.equal(d.querySelectorAll('#warmup-exercise .timed-results span').length,notes.length);assert.equal(d.querySelector('#warmup-pattern-name').textContent,WARMUP_PATTERNS[i].name);assert.equal(d.querySelector('#warmup-progress-bar').getAttribute('aria-valuenow'),String(i));if(i<4)assert.equal(d.querySelector('[data-warmup-step="'+(i+1)+'"]').disabled,true);
   const before=s.played.length;d.querySelector('#warmup-demo').click();await flush();assert.deepEqual(s.played.slice(before).map(p=>p.note),notes);assert.equal(selector.disabled,true);assert.equal(d.querySelector('#next-warmup-pattern').disabled,true);
   for(let j=1;j<notes.length;j++)assert.ok(Math.abs(s.played[before+j].start-s.played[before+j-1].start-1.5)<1e-8);
-  time+=notes.length*1500+500;s.tick(time);assert.equal(selector.disabled,false);
+  time+=notes.length*1500+500;s.tick(time);assert.equal(selector.disabled,false);assert.equal(JSON.parse(s.w.localStorage.getItem(WARMUP_KEY)).completed,i);
   d.querySelector('#warmup-retry').click();await flush();assert.equal(s.played.length,before+notes.length);const start=time+1850;
   for(let t=start;t<start+notes.length*1500;t+=50){const note=notes[Math.floor((t-start)/1500)];s.setSignal(tone(440*2**((note-69)/12)));s.tick(t);}
   time=start+notes.length*1500+50;s.tick(time);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.ok(d.querySelector('#warmup-success').textContent.includes(WARMUP_PATTERNS[i].name));
-  for(let j=0;j<notes.length;j++)assert.ok(d.querySelector('#warmup-result'+j).textContent.includes('מדויק'));
+  for(let j=0;j<notes.length;j++)assert.ok(d.querySelector('#warmup-result'+j).textContent.includes('מדויק'));assert.equal(JSON.parse(s.w.localStorage.getItem(WARMUP_KEY)).completed,i+1);assert.equal(d.querySelector('[data-warmup-step="'+i+'"]').getAttribute('aria-current'),'step');
   // Octave-equivalent singing maps to the current target, including G and the high final C.
   const centers=notes.map((_,j)=>Number(d.querySelector('#warmup-target'+j).getAttribute('y'))+Number(d.querySelector('#warmup-target'+j).getAttribute('height'))/2);
   const dots=[...d.querySelectorAll('#warmup-trace circle')];
   for(let j=0;j<notes.length;j++){const dot=dots.find(dot=>Number(dot.getAttribute('cx'))>20+560*(j+.6)/notes.length&&Number(dot.getAttribute('cx'))<20+560*(j+.9)/notes.length);assert.ok(dot);assert.ok(Math.abs(Number(dot.getAttribute('cy'))-centers[j])<2);}
  }
  assert.equal(d.querySelector('#next-warmup-pattern').disabled,true);const saved=s.w.localStorage.getItem('ear-training-singing-v1');
- const again=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:saved});assert.equal(again.w.document.querySelector('#warmup-pattern').value,WARMUP_PATTERNS[4].id);assert.equal(again.w.document.querySelectorAll('#warmup-chart rect').length,7);assert.equal(again.w.document.querySelector('#warmup-root').value,'48');
+ const again=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:saved,warmupProgress:JSON.parse(s.w.localStorage.getItem(WARMUP_KEY))});assert.equal(again.w.document.querySelector('[data-warmup-step="4"]').getAttribute('aria-current'),'step');assert.equal(again.w.document.querySelector('#warmup-course-complete').hidden,false);assert.equal(again.w.document.querySelectorAll('#warmup-chart rect').length,7);assert.equal(again.w.document.querySelector('#warmup-root').value,'48');
  assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');await s.w.happyDOM.close();await again.w.happyDOM.close();
+});
+
+test('warmup stages reject skips and malformed saves, retain unlocks and never count a replay twice',()=>{
+ let p=loadWarmupProgress({getItem:()=>null});assert.equal(canOpenWarmup(p,0),true);assert.equal(canOpenWarmup(p,1),false);assert.equal(canOpenWarmup(p,-1),false);
+ for(let i=0;i<5;i++){p={...p,current:i};p=completeWarmup(p);assert.equal(p.completed,i+1);assert.equal(completeWarmup(p),p);assert.equal(canOpenWarmup(p,i+1),i<4);assert.deepEqual(loadWarmupProgress({getItem:()=>JSON.stringify(p)}),p);}
+ assert.equal(completeWarmup({...p,current:0}).completed,5);
+ for(const value of ['bad',JSON.stringify({version:1,current:4,completed:0}),JSON.stringify({version:1,current:4,completed:6})])assert.deepEqual(loadWarmupProgress({getItem:()=>value}),{version:1,current:0,completed:0});
+});
+test('warmup stages resist legacy selection, partial or stopped singing and preserve progress across refresh and earlier replays',async()=>{
+ let s=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,singingSaved:JSON.stringify({exercise:'warmup',warmupPattern:WARMUP_PATTERNS[4].id})}),d=s.w.document;
+ const progress=()=>JSON.parse(s.w.localStorage.getItem(WARMUP_KEY));
+ assert.equal(progress().current,0);assert.equal(progress().completed,0);d.querySelector('[data-warmup-step="4"]').click();d.querySelector('#next-warmup-pattern').click();assert.equal(progress().current,0);
+ d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-retry').click();await flush();
+ const notes=[48,50,52,50];for(let t=1850;t<7850;t+=50){const i=Math.floor((t-1850)/1500);s.setSignal(tone(440*2**((notes[i]+(i===2?1:0)-69)/12)));s.tick(t);}s.tick(7900);assert.equal(progress().completed,0);assert.equal(d.querySelector('[data-warmup-step="1"]').disabled,true);
+ d.querySelector('#warmup-retry').click();await flush();s.tick(10000);d.querySelector('#warmup-stop').click();assert.equal(progress().completed,0);
+ await s.w.happyDOM.close();s=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,warmupProgress:{version:1,current:0,completed:1},singingSaved:JSON.stringify({exercise:'warmup'})});d=s.w.document;
+ assert.equal(d.querySelector('[data-warmup-step="1"]').disabled,false);assert.equal(d.querySelector('[data-warmup-step="2"]').disabled,true);assert.equal(d.querySelector('[data-warmup-step="0"]').getAttribute('aria-current'),'step');
+ d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-retry').click();await flush();for(let t=1850;t<7850;t+=50){s.setSignal(tone(440*2**((notes[Math.floor((t-1850)/1500)]-69)/12)));s.tick(t);}s.tick(7900);assert.equal(progress().completed,1);
+ d.querySelector('#next-warmup-pattern').click();assert.equal(progress().current,1);assert.equal(d.querySelector('[data-warmup-step="2"]').disabled,true);
+ const again=await setup({production:true,singingProgress:finishedSinging,pairProgress:finishedPairs,warmupProgress:progress(),singingSaved:s.w.localStorage.getItem('ear-training-singing-v1')});assert.equal(again.w.document.querySelector('[data-warmup-step="1"]').getAttribute('aria-current'),'step');assert.equal(again.w.document.querySelector('#next-warmup-pattern').disabled,true);
+ assert.equal(JSON.parse(s.w.localStorage.getItem(PROGRESS_KEY)).completed,10);assert.equal(JSON.parse(s.w.localStorage.getItem(PAIR_KEY)).completed,4);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');await s.w.happyDOM.close();await again.w.happyDOM.close();
 });
