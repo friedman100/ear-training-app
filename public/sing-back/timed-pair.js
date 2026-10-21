@@ -1,5 +1,5 @@
-import {detectPitch,centsFromTarget} from './pitch.js?v=warmup-1800-v4';
-import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=warmup-1800-v4';
+import {detectPitch,centsFromTarget} from './pitch.js?v=warmup-1500-v5';
+import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=warmup-1500-v5';
 export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pattern=null,slotMs=SLOT_MS,demoMs=4000,countMs=1800,requiredMs=REQUIRED_ACCURATE_MS}={}){
  const $=id=>env.document.getElementById(prefix+id);
  let context,stream,input,analyser,raf,running=false,pending=false,serial=0,notes=[48,50],origin=0,withSinging=false,round,lastFrame=0;
@@ -52,7 +52,7 @@ export function createTimedPair(env=window,{onActivate=()=>{},prefix='timed-',pa
  if(running||sing&&!stream)return;onActivate();cancel();running=true;withSinging=sing;setup();controls();$('error').hidden=true;status('מכין את הפסנתר…');const id=serial;
  try{await ctx().resume();await Promise.all(notes.map(async n=>{if(cache.has(n))return;const r=await env.fetch(`../audio/${n}.mp3`);if(!r.ok)throw new Error();cache.set(n,await context.decodeAudioData(await r.arrayBuffer()));}));if(id!==serial)return;
  origin=context.currentTime+.05;round=createTimedRound(notes,{slotMs,demoMs,countMs,requiredMs});lastFrame=0;
- const stretch=pattern?Math.max(1,slotMs/1800):1;
+ const stretch=pattern?slotMs/1800:1;
  notes.forEach((note,i)=>{const source=context.createBufferSource(),gain=context.createGain(),at=origin+i*slotMs/1000;source.buffer=cache.get(note);source.connect(gain);gain.connect(context.destination);gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(1,at+.015);gain.gain.setValueAtTime(1,at+(slotMs<1000 ? .2 : .5*stretch));gain.gain.exponentialRampToValueAtTime(.35,at+(slotMs<1000 ? .6 : .8*stretch));gain.gain.exponentialRampToValueAtTime(.0001,at+(slotMs<1000 ? .88 : 2.18*stretch));gain.gain.linearRampToValueAtTime(0,at+(slotMs<1000 ? .9 : 2.2*stretch));source.start(at);source.stop(at+(slotMs<1000 ? .9 : 2.2*stretch));sources.push(source);});
  raf=env.requestAnimationFrame(renderFrame);
  }catch{if(id!==serial)return;cancel();$('error').textContent='לא הצלחנו להשמיע את הפסנתר. נסו שוב.';$('error').hidden=false;}
