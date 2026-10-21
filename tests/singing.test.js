@@ -39,7 +39,7 @@ async function setup({secure=true,deny=false,timed=false,warmup=false}={}){
  w.document.write((await readFile('public/sing-back/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));
  let requests=0,stopped=0,frame,clock=0,signal=tone(130.8128),source;
  const env={document:w.document,isSecureContext:secure,performance:{now:()=>clock},navigator:{mediaDevices:{getUserMedia:async()=>{requests++;if(deny)throw Object.assign(new Error(),{name:'NotAllowedError'});return {getTracks:()=>[{stop(){stopped++;}}]};}}},AudioContext:class{sampleRate=48000;get currentTime(){return clock/1000;}destination={};resume(){return Promise.resolve();}close(){}createMediaStreamSource(){return {connect(){},disconnect(){}};}createAnalyser(){return {fftSize:4096,getFloatTimeDomainData(array){array.set(signal);}};}decodeAudioData(){return Promise.resolve({});}createBufferSource(){source={connect(){},start(){},stop(){}};return source;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}},fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)}),requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame(){frame=null;},addEventListener(){}};
- if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],slotMs:600,demoMs:2800,countMs:1200,requiredMs:200});else if(timed)createTimedPair(env);else createPrototype(env);
+ if(warmup)createTimedPair(env,{prefix:'warmup-',pattern:[0,2,4,2],slotMs:1800,demoMs:7600,countMs:1800,requiredMs:600});else if(timed)createTimedPair(env);else createPrototype(env);
  return {w,env,get requests(){return requests;},get stopped(){return stopped;},tick(time){clock=time;frame?.(time);},finishPiano(){source.onended();},setSignal(value){signal=value;}};
 }
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
@@ -124,25 +124,25 @@ test('timed notes credit accumulated green-dot time despite short detuning and n
  const before=sparse.results[0].goodMs;sparse.update(detected(f),7000);assert.equal(sparse.results[0].goodMs,before);
 });
 
-test('new short warmup is appended below existing exercises and scores all four fast slots independently',async()=>{
+test('new short warmup is appended below existing exercises and scores all four slower slots independently',async()=>{
  const s=await setup({warmup:true}),d=s.w.document;
  assert.ok(d.querySelector('#single-exercise'));assert.ok(d.querySelector('#timed-exercise'));assert.ok(d.querySelector('#warmup-exercise'));
  assert.ok(d.querySelector('#timed-exercise').compareDocumentPosition(d.querySelector('#warmup-exercise'))&4);
  assert.equal(d.querySelectorAll('#warmup-chart rect').length,4);
  assert.ok(d.querySelector('#warmup-note2').textContent.includes('מי'));assert.ok(d.querySelector('#warmup-note3').textContent.includes('רה'));
  d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-start').click();await flush();
- s.tick(2900);assert.ok(d.querySelector('#warmup-phase').textContent.includes('1'));
+ s.tick(7700);assert.ok(d.querySelector('#warmup-phase').textContent.includes('1'));
  const frequencies=[130.8128,146.8324,164.8138,146.8324];
- for(let time=4050;time<6450;time+=50){s.setSignal(tone(frequencies[Math.floor((time-4050)/600)]));s.tick(time);}
- s.tick(6500);assert.equal(d.querySelector('#warmup-success').hidden,false);
+ for(let time=9450;time<16650;time+=50){s.setSignal(tone(frequencies[Math.floor((time-9450)/1800)]));s.tick(time);}
+ s.tick(16700);assert.equal(d.querySelector('#warmup-success').hidden,false);
  for(let i=0;i<4;i++)assert.ok(d.querySelector('#warmup-result'+i).textContent.includes('מדויק'));
  assert.ok(d.querySelector('#warmup-trace').childElementCount>20);await s.w.happyDOM.close();
 });
 test('short warmup uses its own timing and accuracy threshold without changing the pair exercise',()=>{
- const notes=[48,50,52,50],config={slotMs:600,demoMs:2800,countMs:1200,requiredMs:200};
+ const notes=[48,50,52,50],config={slotMs:1800,demoMs:7600,countMs:1800,requiredMs:600};
  const round=createTimedRound(notes,config);
- for(let time=4000;time<6400;time+=50){const step=Math.floor((time-4000)/600);round.update(step===2?null:detected(440*2**((notes[step]-69)/12)),time);}
+ for(let time=9400;time<16600;time+=50){const step=Math.floor((time-9400)/1800);round.update(step===2?null:detected(440*2**((notes[step]-69)/12)),time);}
  assert.equal(round.results.length,4);assert.deepEqual(round.results.map(r=>r.accurate),[true,true,false,true]);
- assert.equal(timelinePhase(6400,true,{...config,noteCount:4}).phase,'done');
+ assert.equal(timelinePhase(16600,true,{...config,noteCount:4}).phase,'done');
  assert.equal(timelinePhase(6400).phase,'sing');
 });
