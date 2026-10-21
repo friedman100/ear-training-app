@@ -113,3 +113,13 @@ test('missing first note does not stall or erase the first target',async()=>{
  s.tick(9500);assert.equal(d.querySelector('#timed-success').hidden,true);assert.ok(d.querySelector('#timed-result0').textContent.includes('לא זוהה'));
  await s.w.happyDOM.close();
 });
+
+test('timed notes credit accumulated green-dot time despite short detuning and never credit noise or long gaps',()=>{
+ const f=130.8128,round=createTimedRound([48,50]);
+ for(let time=5800;time<7600;time+=50){const cents=(time-5800)%350<300?20:40;round.update(detected(f*2**(cents/1200)),time);}
+ assert.equal(round.results[0].accurate,true);assert.ok(round.results[0].goodMs>=600);
+ for(let time=7600;time<9400;time+=50)round.update(null,time);
+ assert.equal(round.results[1].accurate,false);assert.equal(round.results[1].goodMs,0);
+ const sparse=createTimedRound([48,50]);for(let time=5800;time<6200;time+=50)sparse.update(detected(f),time);
+ const before=sparse.results[0].goodMs;sparse.update(detected(f),7000);assert.equal(sparse.results[0].goodMs,before);
+});

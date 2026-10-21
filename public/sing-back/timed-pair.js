@@ -1,10 +1,11 @@
 import {detectPitch,centsFromTarget} from './pitch.js';
-import {createTimedRound,timelinePhase,SLOT_MS} from './timeline.js';
+import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js';
 export function createTimedPair(env=window,{onActivate=()=>{}}={}){
  const $=id=>env.document.getElementById('timed-'+id);
  let context,stream,input,analyser,raf,running=false,pending=false,serial=0,notes=[48,50],origin=0,withSinging=false,round,lastFrame=0;
  const cache=new Map();let sources=[];
  const names=['C','C♯/D♭','D','D♯/E♭','E','F','F♯/G♭','G','G♯/A♭','A','A♯/B♭','B'];
+ const credit=r=>`${(Math.min(r.goodMs,REQUIRED_ACCURATE_MS)/1000).toFixed(2)} מתוך ${(REQUIRED_ACCURATE_MS/1000).toFixed(2)} שניות מדויקות`;
  const title=m=>names[m%12].split('/').map(n=>n+(Math.floor(m/12)-1)).join(' / ');
  function ctx(){context??=new (env.AudioContext||env.webkitAudioContext)();return context;}
  function controls(){['demo','root','direction'].forEach(id=>$(id).disabled=running||pending);$('start').disabled=running||!stream;$('stop').hidden=!running;}
@@ -27,7 +28,7 @@ export function createTimedPair(env=window,{onActivate=()=>{}}={}){
  const phase=timelinePhase(time,withSinging);
  if(phase.phase==='done'){
  running=false;controls();
- if(withSinging){round.results.forEach((r,i)=>{$('result'+i).textContent=`צליל ${i===0?'ראשון':'שני'} — ${r.accurate?'✓ מדויק':r.readings?'ננסה שוב':'לא זוהה קול יציב'}`;$('result'+i).className=r.accurate?'achieved':'';});const success=round.results.every(r=>r.accurate);$('success').hidden=!success;status(success?'יפה! שני הצלילים נשארו מולכם והצלחתם.':'הניסיון הסתיים. הסתכלו על הקול שלכם ונסו שוב.');}
+ if(withSinging){round.results.forEach((r,i)=>{$('result'+i).textContent=`צליל ${i===0?'ראשון':'שני'} — ${r.accurate?'✓ מדויק':r.readings?'ננסה שוב':'לא זוהה קול יציב'} · ${credit(r)}`;$('result'+i).className=r.accurate?'achieved':'';});const success=round.results.every(r=>r.accurate);$('success').hidden=!success;status(success?'יפה! שני הצלילים נשארו מולכם והצלחתם.':'הניסיון הסתיים. הסתכלו על הקול שלכם ונסו שוב.');}
  else status('זו הדוגמה. הפעילו מיקרופון ולחצו ״האזנה ואז שירה״.');
  $('cursor').setAttribute('x1','580');$('cursor').setAttribute('x2','580');for(let i=0;i<2;i++)$('target'+i).classList.remove('active');return;
  }
@@ -40,7 +41,7 @@ export function createTimedPair(env=window,{onActivate=()=>{}}={}){
  const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);const detection=detectPitch(data,context.sampleRate);const {result}=round.update(detection,time);
  status(`עכשיו שרים — צליל ${phase.step===0?'ראשון':'שני'}${result?.reliable?'':' · מקשיב...'}`);
  if(detection&&result?.reliable){const low=Math.min(...notes),cents=centsFromTarget(detection.frequency,low),y=Math.max(40,Math.min(180,145-cents*.375));const dot=env.document.createElementNS('http://www.w3.org/2000/svg','circle');dot.setAttribute('cx',String(x));dot.setAttribute('cy',String(y));dot.setAttribute('r','3');dot.setAttribute('fill',Math.abs(centsFromTarget(detection.frequency,notes[phase.step]))<=25?'#3f8c43':'#b78a4d');$('trace').append(dot);}
- round.results.forEach((r,i)=>{if(r.accurate){$('result'+i).textContent=`צליל ${i===0?'ראשון':'שני'} — ✓ מדויק`;$('result'+i).className='achieved';}});
+ round.results.forEach((r,i)=>{$('result'+i).textContent=`צליל ${i===0?'ראשון':'שני'} — ${r.accurate?'✓ מדויק':credit(r)}`;$('result'+i).className=r.accurate?'achieved':'';});
  }
  }
  raf=env.requestAnimationFrame(renderFrame);
