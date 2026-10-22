@@ -5,7 +5,7 @@ import {CHORDS} from './chords.js';
 import {playSongSequence,stop} from './audio.js';
 import {createSongMediaPlayer,playerMarkup,formatTime} from './song-player.js';
 export function createSongScreen({app,storage,navigation,bindNavigation}){
- let state=loadSongs(storage),visible=false,view='library',loaded='',token=0,busy=false,preview=null,scroll=0,notice='',successOpen=false;
+ let state=loadSongs(storage),visible=false,view='library',loaded='',token=0,busy=false,preview=null,scroll=0,notice='',successOpen=false,transition='';
  const $=id=>document.getElementById('songs-'+id),button=(id,label,cls='',disabled=false)=>`<button id="songs-${id}" class="${cls}" ${disabled?'disabled':''}>${label}</button>`;
  const on=(id,fn)=>$(id)?.addEventListener('click',fn);
  const player=createSongMediaPlayer({document,beforePlay:()=>{cancelPreview();if($('preview-stop'))$('preview-stop').disabled=true;}});
@@ -13,7 +13,7 @@ export function createSongScreen({app,storage,navigation,bindNavigation}){
  function save(){try{storage.setItem(SONG_KEY,JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. אפשר להמשיך לתרגל.';}}
  function cancelPreview(){token++;stop();busy=false;}
  function library(){cancelPreview();player.hide();view='library';successOpen=false;render();}
- function open(song,part){cancelPreview();player.pause();state=openSongPart(state,song,part);loaded='';view='practice';preview=null;successOpen=false;save();render();}
+ function open(song,part,message=''){transition=message;cancelPreview();player.pause();state=openSongPart(state,song,part);loaded='';view='practice';preview=null;successOpen=false;save();render();}
  async function audition(kind='qualities',midi=null){
  const song=findSong(state.selected.songId),part=findPart(song,state.selected.partId),r=songEntry(state,song.id,part.id).round;
  cancelPreview();player.pause();busy=true;const request=token;
@@ -40,7 +40,7 @@ export function createSongScreen({app,storage,navigation,bindNavigation}){
  const old=document.querySelector('.bass-keyboard-scroll');if(old)scroll=old.scrollLeft;
  const entry=songEntry(state,song.id,part.id),r=entry.round,bassStage=r.stage==='bass',filled=r.answer.every(Number.isInteger),chosen=r.qualities.every(v=>v!==null),n=part.chords.length;
  renderPractice(`${header()}<main class="bass-screen song-screen"><div class="intro"><span class="eyebrow">רמה 1 · שלב 6</span><h1>${song.title}</h1><p>${song.artist} · ${song.difficulty}</p>${button('library','→ ספריית השירים','quiet')}</div><div class="song-parts" role="group" aria-label="בחירת חלק בשיר">${song.parts.map(p=>`<button data-song-part="${p.id}" aria-pressed="${p.id===part.id}">${p.name}<small><span dir="ltr">${formatTime(p.start)}–${formatTime(p.end)}</span>${songEntry(state,song.id,p.id)?.completed?' · ✓ הושלם':''}</small></button>`).join('')}</div>
- <div id="songs-recording" data-song="${song.id}">${playerMarkup(song)}</div><p class="song-arrangement-note">${part.name}: מצאו את המהלך בן ${n} האקורדים שחוזר בקטע. אפשר להאט, לסמן לופ ולחפש בגיטרה או במקלדת.${!song.bpm?' הדגמת התשובה בפסנתר היא בקצב קבוע להשוואת הצלילים.':''}</p>
+ ${transition?`<p id="songs-transition" class="bass-feedback" role="status" tabindex="-1">${transition}</p>`:''}<div id="songs-recording" data-song="${song.id}">${playerMarkup(song)}</div><p class="song-arrangement-note">${part.name}: מצאו את המהלך בן ${n} האקורדים שחוזר בקטע. אפשר להאט, לסמן לופ ולחפש בגיטרה או במקלדת.${!song.bpm?' הדגמת התשובה בפסנתר היא בקצב קבוע להשוואת הצלילים.':''}</p>
  <ol class="progression-stages"><li ${bassStage?'aria-current="step"':''}>${bassStage?'1.':'✓'} הוצאת הבס</li><li ${!bassStage?'aria-current="step"':''}>2. זיהוי האקורדים</li></ol>
  <section class="panel bass-practice"><h2>${bassStage?'מצאו את צלילי הבס בהקלטה':r.completed?'כל הכבוד! הוצאתם את החלק נכון':'הבס נכון! עכשיו זהו מז׳ור או מינור'}</h2>
  ${bassStage?`<p class="bass-help">האזינו להקלטה ונסו לשיר את הבס. לחיצה על קליד משמיעה אותו בלבד. „הכנס למשבצת” שומר את הבחירה. אותו צליל באוקטבה אחרת מתקבל.</p><div class="bass-slots" style="--song-notes:${n}" aria-label="רצף צלילי הבס">${r.answer.map((midi,i)=>`<button data-song-slot="${i}" aria-pressed="${r.active===i}" class="bass-slot ${r.active===i?'active':''} ${r.bassResult?(r.bassResult.matches[i]?'correct':'wrong'):''}"><small>צליל ${i+1}</small><strong>${midi===null?'?':noteName(midi)}</strong>${r.bassResult?`<span>${r.bassResult.matches[i]?'✓ נכון':'× נסו שוב'}</span>`:''}</button>`).join('')}</div>${renderBassKeyboard(preview,'data-song-key')}<div class="bass-preview-actions"><p role="status">${preview===null?'אפשר להקשיב לכמה קלידים שרוצים לפני שבוחרים.':`הצליל להאזנה: ${noteName(preview)}`}</p>${button('insert',`הכנס למשבצת ${r.active+1}`,'bass-secondary',preview===null)}</div><div class="bass-answer-actions">${button('bass-answer','▶ השמע את רצף הבס שלי','bass-secondary',!filled)}${button('check','בדוק תשובה','next',!filled)}</div><div role="status" class="bass-feedback">${r.bassResult?`זיהיתם ${r.bassResult.count} מתוך ${n} צלילים. אפשר לתקן ולנסות שוב.`:''}</div>`:
@@ -56,7 +56,10 @@ export function createSongScreen({app,storage,navigation,bindNavigation}){
  on('insert',()=>{if(!bassStage||preview===null)return;r.answer[r.active]=preview;r.active=Math.min(n-1,r.active+1);r.bassResult=null;preview=null;save();render();});
  document.querySelectorAll('[data-song-quality]').forEach(b=>b.onclick=()=>{if(bassStage||r.completed)return;const [index,value]=b.dataset.songQuality.split(':');r.qualities[Number(index)]=value;r.qualityResult=null;save();render();});
  on('bass-answer',()=>{if(filled)audition('bass');});on('answer',()=>{if(chosen)audition();});on('review',()=>audition());on('preview-stop',()=>{cancelPreview();render();});
- on('check',()=>{if(r.completed||!(bassStage?filled:chosen))return;state=submitSong(state,song,part);successOpen=songEntry(state,song.id,part.id).round.completed;save();render();});
+ on('check',()=>{if(r.completed||!(bassStage?filled:chosen))return;state=submitSong(state,song,part);successOpen=songEntry(state,song.id,part.id).round.completed;
+ const nextPart=song.parts[song.parts.findIndex(p=>p.id===part.id)+1];
+ if(successOpen&&nextPart){open(song,nextPart,`כל הכבוד! השלמתם את ${part.name}. ממשיכים ל${nextPart.name}.`);$('transition')?.focus({preventScroll:true});$('transition')?.scrollIntoView?.({block:'center',behavior:'smooth'});return;}
+ save();render();});
  on('retry',()=>{cancelPreview();entry.round=newSongRound(part);preview=null;successOpen=false;save();render();});
  const dialog=$('success-dialog');if(dialog){dialog.addEventListener('cancel',event=>{event.preventDefault();successOpen=false;render();});dialog.showModal();}
  }
