@@ -28,3 +28,8 @@ test('published singing page resolves shared controllers, styles and piano sampl
  const js=await readFile('dist/'+path,'utf8');for(const match of js.matchAll(/from ['"]([^'"]+)['"]/g)){const url=new URL(match[1],new URL(path,'https://example.test/ear-training-app/'));await access('dist/'+url.pathname.replace('/ear-training-app/',''));}
  }
 });
+
+test('published demo song is the committed MP3 under the project-site path',async()=>{
+ const {SONGS}=await import('../src/songs.js');
+ for(const song of SONGS){assert.deepEqual(await readFile('dist/'+song.audio),await readFile('public/'+song.audio));const url=new URL(song.audio,'https://example.test/ear-training-app/');assert.ok(url.pathname.startsWith('/ear-training-app/songs/'));}
+});

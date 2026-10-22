@@ -18,6 +18,9 @@ export function playChord(notes,broken=false,onPlaybackChange=()=>{},onReady=()=
 export function playBassSequence(plan,onPlaybackChange=()=>{},onBeat=()=>{}){
  return playPlan(plan,onPlaybackChange,()=>{},1,{duration:1.3,release:.35,onBeat});
 }
+export function playSongSequence(plan,spacing,onPlaybackChange=()=>{}){
+ return playPlan(plan,onPlaybackChange,()=>{},1,{duration:Math.max(.4,spacing-.3),release:.35});
+}
 async function playPlan(plan,onPlaybackChange,onReady,level,{duration=NOTE_DURATION,release=RELEASE_TAIL,onBeat}={}){
  stop();const request=generation;
  context??=new AudioContext();

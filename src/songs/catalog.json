@@ -1,0 +1,16 @@
+[
+  {
+    "id": "first-light",
+    "title": "צעד ראשון",
+    "artist": "האקדמיה לגיטרה של אמיר פרידמן",
+    "difficulty": "מתחילים",
+    "description": "קטע מקורי לבדיקת התרגיל: פסנתר, בס וקצב. בכל חלק המהלך בן ארבעת האקורדים חוזר שלוש פעמים.",
+    "audio": "songs/first-light.mp3",
+    "duration": 60,
+    "bpm": 96,
+    "parts": [
+      {"id":"verse","name":"בית","start":0,"end":30,"beatsPerChord":4,"chords":[{"root":48,"quality":"major","english":"C","hebrew":"דו"},{"root":55,"quality":"major","english":"G","hebrew":"סול"},{"root":57,"quality":"minor","english":"A","hebrew":"לה"},{"root":53,"quality":"major","english":"F","hebrew":"פה"}]},
+      {"id":"chorus","name":"פזמון","start":30,"end":60,"beatsPerChord":4,"chords":[{"root":48,"quality":"major","english":"C","hebrew":"דו"},{"root":55,"quality":"major","english":"G","hebrew":"סול"},{"root":57,"quality":"minor","english":"A","hebrew":"לה"},{"root":53,"quality":"major","english":"F","hebrew":"פה"}]}
+    ]
+  }
+]

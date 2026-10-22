@@ -1,3 +1,4 @@
+import {createSongScreen} from './song-screen.js';
 import {createProgressionScreen} from './progression-screen.js';
 import {createBassScreen} from './bass-screen.js';
 import {createChordScreen} from './chord-screen.js';
@@ -11,16 +12,17 @@ let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='
 let session=loadSession(storage);
 const app=document.querySelector('#app');
 let section=location.protocol==='file:'?'intervals':'singing';
-const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button><button data-section="chords" aria-pressed="${section==='chords'}">3. זיהוי אקורדים</button><button data-section="bass" aria-pressed="${section==='bass'}">4. הוצאת בס משמיעה</button><button data-section="progression" aria-pressed="${section==='progression'}">5. הוצאת מהלך אקורדים משמיעה</button></nav>`;
+const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button><button data-section="chords" aria-pressed="${section==='chords'}">3. זיהוי אקורדים</button><button data-section="bass" aria-pressed="${section==='bass'}">4. הוצאת בס משמיעה</button><button data-section="progression" aria-pressed="${section==='progression'}">5. הוצאת מהלך אקורדים משמיעה</button><button data-section="songs" aria-pressed="${section==='songs'}">6. הוצאת שירים משמיעה</button></nav>`;
 function bindPathNavigation(){document.querySelectorAll('[data-section]').forEach(button=>button.onclick=()=>{
  if(button.dataset.section===section)return;
  const frame=document.getElementById('singing-frame');
  try{if(frame?.contentWindow)frame.contentWindow.dispatchEvent(new Event('singing-stop'));}catch{}
- progression.hide();bass.hide();chords.hide();token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
+ songs.hide();progression.hide();bass.hide();chords.hide();token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
 });}
 const chords=createChordScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 const bass=createBassScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 const progression=createProgressionScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
+const songs=createSongScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 function renderSinging(){
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1&v=scale-tolerance40-11" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
  bindPathNavigation();
@@ -37,6 +39,7 @@ function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=q
 async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},state.playbackType);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
+ if(section==='songs'){songs.show();return;}
  if(section==='progression'){progression.show();return;}
  if(section==='bass'){bass.show();return;}
  if(section==='chords'){chords.show();return;}
