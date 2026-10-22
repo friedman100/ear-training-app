@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {BASS_KEY,bassChords} from '../src/bass.js';
 import {BASS_MODE_KEY} from '../src/bass-course.js';
-import {PROGRESSION_KEY} from '../src/progression.js';
+import {PROGRESSION_KEY,initialProgression,newProgressionRound,submitProgressionBass} from '../src/progression.js';
 import {initialState} from '../src/logic.js';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js')),source=await readFile('dist/assets/'+asset,'utf8');
 const flush=async()=>{for(let i=0;i<60;i++)await Promise.resolve();};
@@ -38,4 +38,11 @@ test('new exercise completes both stages with retries, audition, original and bu
 test('leaving or stopping the exercise cancels pending audio without changing its answers',async()=>{
  const w=setup({},true),d=w.document;click(w,'full');await flush();assert.equal(w.notes.length,16);const before=stored(w),stops=w.stops;click(w,'stop');assert.equal(w.stops,stops+16);w.audioTimers.forEach(fn=>fn());await flush();assert.deepEqual(stored(w),before);assert.ok(d.querySelector('#progression-stop').disabled);
  click(w,'full');d.querySelector('[data-section="intervals"]').click();await flush();assert.ok(d.querySelector('#listen'));await w.happyDOM.close();
+});
+
+test('saved D-major progression shows F sharp minor consistently after bass and in completed solution',async()=>{
+ let s=initialProgression();s.current=newProgressionRound({patternIndex:4,key:2});s.current.answer=bassChords(s.current.q).map(c=>c.bass);s=submitProgressionBass(s);
+ const w=setup({[PROGRESSION_KEY]:JSON.stringify(s)}),d=w.document;
+ assert.match(d.querySelectorAll('.progression-chord h3')[1].textContent,/פה דיאז/);assert.equal(d.querySelectorAll('.progression-chord h3 [lang="en"]')[1].textContent,'F♯');
+ choose(w,['major','minor','minor','major']);click(w,'check-quality');const result=d.querySelector('.progression-success').textContent;assert.match(result,/F♯m/);assert.match(result,/פה דיאז מינור/);assert.ok(!result.includes('G♭'));assert.ok(!result.includes('/'));await w.happyDOM.close();
 });

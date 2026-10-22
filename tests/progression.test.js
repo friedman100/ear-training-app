@@ -21,3 +21,16 @@ test('only exact bass pitch classes open quality stage, retries and refresh pres
  assert.deepEqual(loadProgression({getItem:()=>'{bad'}),initialProgression());
  const corrupt=structuredClone(s);corrupt.current.stage='bass';assert.deepEqual(loadProgression({getItem:()=>JSON.stringify(corrupt)}),initialProgression());
 });
+
+test('progression roots use their diatonic spelling in sharp, flat and relative minor keys',async()=>{
+ const {progressionRootNames}=await import('../src/tonality.js');
+ assert.deepEqual(progressionRootNames({patternIndex:4,key:2}).map(n=>n.english),['D','F♯','B','A']);
+ assert.equal(progressionRootNames({patternIndex:4,key:2})[1].hebrew,'פה דיאז');
+ assert.deepEqual(progressionRootNames({patternIndex:5,key:2}).map(n=>n.english),['B','A','G','F♯']);
+ assert.deepEqual(progressionRootNames({patternIndex:0,key:5}).map(n=>n.english),['F','C','D','B♭']);
+ assert.equal(progressionRootNames({patternIndex:0,key:5})[3].hebrew,'סי במול');
+ assert.deepEqual(progressionRootNames({patternIndex:4,key:3}).map(n=>n.english),['E♭','G','C','B♭']);
+ for(let patternIndex=0;patternIndex<BASS_PATTERNS.length;patternIndex++)for(let key=0;key<12;key++){
+ const q={patternIndex,key};progressionRootNames(q).forEach((name,i)=>{assert.equal(name.pitchClass,bassChords(q)[i].bass%12);assert.ok(!name.english.includes('/'));assert.ok(!name.hebrew.includes('/'));});
+ }
+});

@@ -1,3 +1,4 @@
+import {progressionRootNames} from './tonality.js';
 import {PROGRESSION_KEY,loadProgression,nextProgression,submitProgressionBass,submitProgressionQualities,progressionPlan} from './progression.js';
 import {bassPlan,bassAnswerPlan,bassChords,noteName,LETTER_NAMES,pc} from './bass.js';
 import {renderBassKeyboard} from './bass-keyboard.js';
@@ -6,7 +7,6 @@ export function createProgressionScreen({app,storage,navigation,bindNavigation})
  let state=loadProgression(storage),visible=false,token=0,busy=false,playing=false,heard=false,beat=-1,preview=null,scroll=0,notice='';
  const button=(id,text,cls='',disabled=false)=>`<button id="progression-${id}" class="${cls}" ${disabled?'disabled':''}>${text}</button>`;
  const on=(id,fn)=>document.getElementById('progression-'+id)?.addEventListener('click',fn);
- const symbol=(midi,quality)=>LETTER_NAMES[pc(midi)].split(' / ').map(root=>root+(quality==='minor'?'m':'')).join(' / ');
  function save(){try{storage.setItem(PROGRESSION_KEY,JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. אפשר להמשיך לתרגל.';}}
  function cancel(){token++;stop();busy=false;playing=false;beat=-1;}
  function next(){cancel();state.current=nextProgression(state.current?.q);heard=false;preview=null;save();render();}
@@ -22,7 +22,7 @@ export function createProgressionScreen({app,storage,navigation,bindNavigation})
  function render(){
  if(!visible)return;if(!state.current){next();return;}
  const old=document.querySelector('.bass-keyboard-scroll');if(old)scroll=old.scrollLeft;
- const r=state.current,bassStage=r.stage==='bass',filled=r.answer.every(Number.isInteger),chosen=r.qualities.every(v=>v!==null);
+ const r=state.current,bassStage=r.stage==='bass',filled=r.answer.every(Number.isInteger),chosen=r.qualities.every(v=>v!==null),rootNames=progressionRootNames(r.q);
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${navigation()}<main class="bass-screen progression-screen"><div class="intro"><span class="eyebrow">רמה 1</span><h1>הוצאת מהלך אקורדים משמיעה</h1><p class="exercise-instruction">קודם מוצאים את ארבעת צלילי הבס, ואז מזהים אילו אקורדים הם מז׳ור ואילו מינור.</p></div>
  <ol class="progression-stages" aria-label="שלבי התרגיל"><li ${bassStage?'aria-current="step"':''}>${bassStage?'1.':'✓'} הוצאת הבס</li><li ${!bassStage?'aria-current="step"':''}>2. זיהוי האקורדים</li></ol>
  <section class="panel bass-practice"><div class="card-top"><span class="badge">${bassStage?'שלב א׳ · מציאת הבס':'שלב ב׳ · מז׳ור או מינור'}</span><span class="muted">אותו מהלך · ארבעה אקורדים</span></div>
@@ -34,10 +34,10 @@ export function createProgressionScreen({app,storage,navigation,bindNavigation})
  <div class="bass-preview-actions"><p role="status">${preview===null?'אפשר להקשיב לכמה קלידים שרוצים לפני שבוחרים.':`הצליל להאזנה: ${noteName(preview)}`}</p>${button('insert',`הכנס למשבצת ${r.active+1}`,'bass-secondary',preview===null)}</div>
  <div class="bass-answer-actions">${button('bass-answer','▶ השמע את רצף הבס שלי','bass-secondary',!filled)}${button('check-bass','בדוק תשובה','next',!filled||!heard)}</div><div class="bass-feedback" role="status">${r.result?`זיהיתם ${r.result.count} מתוך 4 צלילים. אפשר לתקן ולבדוק שוב.`:heard?'':'האזינו למהלך לפני בדיקת התשובה.'}</div>`:
  `<h2>${r.completed?'כל הכבוד! הוצאתם את המהלך נכון':'הבס נכון! עכשיו זהו את סוגי האקורדים'}</h2><p class="bass-help">הקשיבו למהלך או לכל אקורד בנפרד. בחרו מז׳ור או מינור לכל צליל בס, והשוו את המהלך שלכם למקור.</p>
- <div class="progression-chords">${r.answer.map((midi,i)=>`<section class="progression-chord ${r.qualityResult?(r.qualityResult.matches[i]?'correct':'wrong'):''}"><span class="muted">אקורד ${i+1}</span><h3>${noteName(midi)} <span dir="ltr" lang="en">${LETTER_NAMES[pc(midi)]}</span></h3>${button('chord-'+i,`▶ השמע אקורד ${i+1}`,'bass-secondary')}
+ <div class="progression-chords">${r.answer.map((midi,i)=>`<section class="progression-chord ${r.qualityResult?(r.qualityResult.matches[i]?'correct':'wrong'):''}"><span class="muted">אקורד ${i+1}</span><h3>${rootNames[i].hebrew} <span dir="ltr" lang="en">${rootNames[i].english}</span></h3>${button('chord-'+i,`▶ השמע אקורד ${i+1}`,'bass-secondary')}
  <div class="progression-quality" role="group" aria-label="סוג אקורד ${i+1}">${[['major','מז׳ור'],['minor','מינור']].map(([value,label])=>`<button data-progression-quality="${i}:${value}" aria-pressed="${r.qualities[i]===value}" ${r.completed?'disabled':''}>${label}</button>`).join('')}</div>${r.qualityResult?`<p>${r.qualityResult.matches[i]?'✓ נכון':'× נסו שוב'}</p>`:''}</section>`).join('')}</div>
  <div class="bass-answer-actions">${button('answer','▶ השמע את המהלך שלי','bass-secondary',!chosen)}${button('check-quality','בדוק תשובה','next',!chosen||r.completed)}</div><div class="bass-feedback" role="status">${r.qualityResult?`זיהיתם ${r.qualityResult.count} מתוך 4 אקורדים${r.completed?'.':'. אפשר לתקן ולנסות שוב.'}`:''}</div>
- ${r.completed?`<section class="bass-solution progression-success"><h3>זה המהלך שהוצאתם</h3><ol>${bassChords(r.q).map(c=>`<li><strong lang="en" dir="ltr">${symbol(c.bass,c.quality)}</strong><span>${noteName(c.bass)} ${c.quality==='major'?'מז׳ור':'מינור'}</span></li>`).join('')}</ol>${button('success-play','▶ השמע את המהלך','bass-secondary')}${button('new','מהלך חדש →','next')}</section>`:''}`}
+ ${r.completed?`<section class="bass-solution progression-success"><h3>זה המהלך שהוצאתם</h3><ol>${bassChords(r.q).map((c,i)=>`<li><strong lang="en" dir="ltr">${rootNames[i].english}${c.quality==='minor'?'m':''}</strong><span>${rootNames[i].hebrew} ${c.quality==='major'?'מז׳ור':'מינור'}</span></li>`).join('')}</ol>${button('success-play','▶ השמע את המהלך','bass-secondary')}${button('new','מהלך חדש →','next')}</section>`:''}`}
  </section><section class="stats bass-stats" aria-label="ההצלחה שלכם בתרגיל"><div><strong>${state.stats.completed}</strong><span>מהלכים שהוצאתם במלואם</span></div><div><strong>${state.stats.bassFirst}</strong><span>בס נכון בהגשה הראשונה</span></div><div><strong>${state.stats.qualityFirst}</strong><span>סוגי אקורדים נכונים בהגשה הראשונה</span></div></section><p class="save-note">◈ המקום והתשובות נשמרים בדפדפן, בנפרד מתרגיל הבס</p>${notice?`<p class="notice" role="alert">${notice}</p>`:''}</main><p class="piano-credit">פסנתר: Salamander Grand Piano V3 · Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a></p>`;
  const keyboard=document.querySelector('.bass-keyboard-scroll');if(keyboard)keyboard.scrollLeft=scroll;
  bindNavigation();on('full',()=>listen());on('bass',()=>listen('bass'));on('stop',()=>{cancel();render();});
