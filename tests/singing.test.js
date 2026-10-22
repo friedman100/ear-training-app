@@ -304,14 +304,15 @@ test('five fixed C warmups play exact notes, rebuild charts, score every slot an
  assert.equal(d.querySelector('#warmup-pattern'),null);assert.equal(d.querySelectorAll('[data-warmup-step]').length,5);assert.equal(d.querySelector('#warmup-root').closest('.timed-options').hidden,true);assert.equal(d.querySelector('#warmup-root').value,'48');
  d.querySelector('#warmup-mic').click();await flush();
  for(let i=0;i<5;i++){
+  const slotMs=WARMUP_PATTERNS[i].slotMs??1500;assert.equal(slotMs,i===2?1800:1500);
   const notes=expected[i],selector=d.querySelector('[data-warmup-step="'+i+'"]');selector.click();
   assert.equal(d.querySelectorAll('#warmup-chart rect').length,notes.length);assert.equal(d.querySelectorAll('#warmup-exercise .timed-results span').length,notes.length);assert.equal(d.querySelector('#warmup-pattern-name').textContent,WARMUP_PATTERNS[i].name);if(i===4)assert.equal(d.querySelector('#warmup-target6').getAttribute('y'),d.querySelector('#warmup-target0').getAttribute('y'));assert.equal(d.querySelector('#warmup-progress-bar').getAttribute('aria-valuenow'),String(i));if(i<4)assert.equal(d.querySelector('[data-warmup-step="'+(i+1)+'"]').disabled,true);
   const before=s.played.length;d.querySelector('#warmup-demo').click();await flush();assert.deepEqual(s.played.slice(before).map(p=>p.note),notes);assert.equal(selector.disabled,true);assert.equal(d.querySelector('#next-warmup-pattern').disabled,true);
-  for(let j=1;j<notes.length;j++)assert.ok(Math.abs(s.played[before+j].start-s.played[before+j-1].start-1.5)<1e-8);
-  time+=notes.length*1500+500;s.tick(time);assert.equal(selector.disabled,false);assert.equal(JSON.parse(s.w.localStorage.getItem(WARMUP_KEY)).completed,i);
+  for(let j=1;j<notes.length;j++)assert.ok(Math.abs(s.played[before+j].start-s.played[before+j-1].start-slotMs/1000)<1e-8);
+  time+=notes.length*slotMs+500;s.tick(time);assert.equal(selector.disabled,false);assert.equal(JSON.parse(s.w.localStorage.getItem(WARMUP_KEY)).completed,i);
   d.querySelector('#warmup-retry').click();await flush();assert.equal(s.played.length,before+notes.length);const start=time+1850;
-  for(let t=start;t<start+notes.length*1500;t+=50){const note=notes[Math.floor((t-start)/1500)];s.setSignal(tone(440*2**((note-69)/12)));s.tick(t);}
-  time=start+notes.length*1500+50;s.tick(time);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.equal(d.querySelector('#warmup-success-title').textContent,'כל הכבוד! שרתם נכון');assert.ok(WARMUP_PATTERNS.every(p=>!d.querySelector('#warmup-success').textContent.includes(p.name)));
+  for(let t=start;t<start+notes.length*slotMs;t+=50){const note=notes[Math.floor((t-start)/slotMs)];s.setSignal(tone(440*2**((note-69)/12)));s.tick(t);}
+  time=start+notes.length*slotMs+50;s.tick(time);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.equal(d.querySelector('#warmup-success-title').textContent,'כל הכבוד! שרתם נכון');assert.ok(WARMUP_PATTERNS.every(p=>!d.querySelector('#warmup-success').textContent.includes(p.name)));
   for(let j=0;j<notes.length;j++)assert.ok(d.querySelector('#warmup-result'+j).textContent.includes('מדויק'));assert.equal(JSON.parse(s.w.localStorage.getItem(WARMUP_KEY)).completed,i+1);assert.equal(d.querySelector('[data-warmup-step="'+i+'"]').getAttribute('aria-current'),'step');
   // Octave-equivalent singing maps to the current target, including G and the final low C.
   const centers=notes.map((_,j)=>Number(d.querySelector('#warmup-target'+j).getAttribute('y'))+Number(d.querySelector('#warmup-target'+j).getAttribute('height'))/2);

@@ -1,9 +1,9 @@
 import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from './warmup-progression.js?v=singing-modes-6';
-import {WARMUP_PATTERNS} from './warmup-patterns.js?v=low-do-8';
+import {WARMUP_PATTERNS} from './warmup-patterns.js?v=scale-breath-10';
 import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-modes-6';
 import {PROGRESS_KEY,loadProgress,completeTarget,nextTarget,solved} from './progression.js?v=singing-modes-6';
 import {createPrototype} from '../sing-back/app.js?v=singing-modes-6';
-import {createTimedPair} from '../sing-back/timed-pair.js?v=singing-modes-6';
+import {createTimedPair} from '../sing-back/timed-pair.js?v=scale-breath-10';
 import {WARMUP_TIMING} from '../sing-back/timeline.js?v=warmup-hold400-v7';
 
 export const SINGING_KEY='ear-training-singing-v1';
@@ -76,7 +76,7 @@ export function createSingingExperience(env=window){
  const controllers=[],stopAll=()=>controllers.forEach(controller=>controller.stop());
  controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true}));
  controllers.push(createTimedPair(env,{onSuccess:onPairSuccess,onBusyChange:value=>{pairBusy=value;updatePairProgress();},onActivate:()=>{controllers[0].stop();controllers[2]?.stop();}}));
- controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,demoMs:warmupPattern.offsets.length*WARMUP_TIMING.slotMs+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
+ controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,slotMs:warmupPattern.slotMs??WARMUP_TIMING.slotMs,demoMs:warmupPattern.offsets.length*(warmupPattern.slotMs??WARMUP_TIMING.slotMs)+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
  function show(id,focus=false,stop=true){
   if(!ids.includes(id)||!accessible(id))return;if(stop)stopAll();current=id;
   for(const name of ids)$(name+'-exercise').hidden=name!==id;
@@ -86,9 +86,9 @@ export function createSingingExperience(env=window){
   if(guided())guidedExercise=id;else freeExercise=id;updateProgress();save();resize();
  }
  function choosePattern(index){
-  if(!patternAvailable(index)||warmupBusy)return;const selected=WARMUP_PATTERNS[index];if(!controllers[2].setPattern(selected.offsets))return;
+  if(!patternAvailable(index)||warmupBusy)return;const selected=WARMUP_PATTERNS[index];if(!controllers[2].setPattern(selected.offsets,{slotMs:selected.slotMs??WARMUP_TIMING.slotMs}))return;
   if(guided()){warmupProgress={...warmupProgress,current:index};persist(WARMUP_KEY,warmupProgress);}else freePattern=index;
-  warmupPattern=selected;$('warmup-pattern-name').textContent=selected.name;updateWarmupProgress();save();resize();
+  warmupPattern=selected;$('warmup-hint').textContent=`${(selected.slotMs??WARMUP_TIMING.slotMs)/1000} שניות לכל צליל. מספיקות 0.4 שניות מצטברות באזור הירוק לכל צליל. אפשר לנשום בין הצלילים ולהמשיך.`;$('warmup-pattern-name').textContent=selected.name;updateWarmupProgress();save();resize();
  }
  function applyMode(){
   doc.querySelectorAll('[data-singing-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.singingMode===mode)));
