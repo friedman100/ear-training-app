@@ -1,15 +1,26 @@
+import {CHORDS} from './chords.js';
+import {PROGRESSION_GUIDED_KEY,PROGRESSION_MODE_KEY,PROGRESSION_GOAL,loadGuidedProgression,loadProgressionMode} from './progression-course.js';
 import {progressionRootNames} from './tonality.js';
-import {PROGRESSION_KEY,loadProgression,nextProgression,submitProgressionBass,submitProgressionQualities,progressionPlan} from './progression.js';
+import {PROGRESSION_KEY,loadProgression,newProgressionRound,nextProgression,submitProgressionBass,submitProgressionQualities,progressionPlan} from './progression.js';
 import {bassPlan,bassAnswerPlan,bassChords,noteName,LETTER_NAMES,pc} from './bass.js';
 import {renderBassKeyboard} from './bass-keyboard.js';
 import {playBassSequence,stop} from './audio.js';
 export function createProgressionScreen({app,storage,navigation,bindNavigation}){
- let state=loadProgression(storage),visible=false,token=0,busy=false,playing=false,heard=false,beat=-1,preview=null,scroll=0,notice='';
+ let freeState=loadProgression(storage),guided=loadGuidedProgression(storage),mode=loadProgressionMode(storage);
+ let state=mode==='guided'?guided.practice:freeState,visible=false,token=0,busy=false,playing=false,heard=false,beat=-1,preview=null,scroll=0,notice='';
  const button=(id,text,cls='',disabled=false)=>`<button id="progression-${id}" class="${cls}" ${disabled?'disabled':''}>${text}</button>`;
  const on=(id,fn)=>document.getElementById('progression-'+id)?.addEventListener('click',fn);
- function save(){try{storage.setItem(PROGRESSION_KEY,JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. אפשר להמשיך לתרגל.';}}
+ function save(){if(mode==='guided')guided.practice=state;else freeState=state;try{storage.setItem(PROGRESSION_MODE_KEY,mode);if(mode==='guided')storage.setItem(PROGRESSION_GUIDED_KEY,JSON.stringify(guided));else storage.setItem(PROGRESSION_KEY,JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. אפשר להמשיך לתרגל.';}}
  function cancel(){token++;stop();busy=false;playing=false;beat=-1;}
- function next(){cancel();state.current=nextProgression(state.current?.q);heard=false;preview=null;save();render();}
+ function next(){
+ cancel();
+ if(mode==='guided'){
+ if(state.current){if(!state.current.completed||guided.index>=PROGRESSION_GOAL-1)return;guided.index++;}
+ state.current=newProgressionRound(guided.questions[guided.index]);
+ }else state.current=nextProgression(state.current?.q);
+ heard=false;preview=null;save();render();
+ }
+ function changeMode(value){if(value===mode)return;cancel();save();mode=value;state=mode==='guided'?guided.practice:freeState;heard=false;preview=null;save();render();}
  async function listen(kind='full',value=null){
  cancel();busy=true;const request=token,r=state.current;
  const plan=kind==='key'?[{midi:value,offset:0,level:.75}]:kind==='bass'?bassPlan(r.q,true):kind==='bass-answer'?bassAnswerPlan(r.answer):kind==='chord'?progressionPlan(r.q,null,value):kind==='answer'?progressionPlan(r.q,r.qualities):progressionPlan(r.q);
@@ -22,8 +33,11 @@ export function createProgressionScreen({app,storage,navigation,bindNavigation})
  function render(){
  if(!visible)return;if(!state.current){next();return;}
  const old=document.querySelector('.bass-keyboard-scroll');if(old)scroll=old.scrollLeft;
- const r=state.current,bassStage=r.stage==='bass',filled=r.answer.every(Number.isInteger),chosen=r.qualities.every(v=>v!==null),rootNames=progressionRootNames(r.q);
+ const r=state.current,bassStage=r.stage==='bass',filled=r.answer.every(Number.isInteger),chosen=r.qualities.every(v=>v!==null),rootNames=progressionRootNames(r.q),courseComplete=mode==='guided'&&guided.completed===PROGRESSION_GOAL;
  app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${navigation()}<main class="bass-screen progression-screen"><div class="intro"><span class="eyebrow">רמה 1</span><h1>הוצאת מהלך אקורדים משמיעה</h1><p class="exercise-instruction">קודם מוצאים את ארבעת צלילי הבס, ואז מזהים אילו אקורדים הם מז׳ור ואילו מינור.</p></div>
+ <nav aria-label="מצב תרגול הוצאת מהלך אקורדים">${button('guided','מסלול מודרך',mode==='guided'?'selected':'')}${button('free','תרגול חופשי',mode==='free'?'selected':'')}</nav>
+ ${mode==='guided'?`<section class="bass-course-progress" aria-label="התקדמות בהוצאת מהלכי אקורדים"><div><strong>פתרתם ${guided.completed} מתוך ${PROGRESSION_GOAL} מהלכים</strong><span>כל מהלך נספר אחרי מציאת הבס וזיהוי כל ארבעת האקורדים. אפשר להיעזר ולתקן.</span></div><div class="track" role="progressbar" aria-label="מהלכים פתורים" aria-valuemin="0" aria-valuemax="${PROGRESSION_GOAL}" aria-valuenow="${guided.completed}"><i style="width:${100*guided.completed/PROGRESSION_GOAL}%"></i></div></section>`:'<p class="bass-free-note">תרגול חופשי ללא הגבלה. ההתקדמות במסלול המודרך נשמרת בנפרד.</p>'}
+ ${courseComplete?`<section class="panel bass-course-success" role="status"><h2>כל הכבוד! השלמתם את מסלול הוצאת מהלך האקורדים משמיעה</h2><p>פתרתם את כל עשרת המהלכים, מהבס ועד סוגי האקורדים. אפשר להמשיך לתרגל בחופשיות.</p>${button('continue-free','ממשיכים לתרגול חופשי','next')}</section>`:''}
  <ol class="progression-stages" aria-label="שלבי התרגיל"><li ${bassStage?'aria-current="step"':''}>${bassStage?'1.':'✓'} הוצאת הבס</li><li ${!bassStage?'aria-current="step"':''}>2. זיהוי האקורדים</li></ol>
  <section class="panel bass-practice"><div class="card-top"><span class="badge">${bassStage?'שלב א׳ · מציאת הבס':'שלב ב׳ · מז׳ור או מינור'}</span><span class="muted">אותו מהלך · ארבעה אקורדים</span></div>
  <div class="bass-beats" aria-label="מיקום במהלך">${[0,1,2,3].map(i=>`<span class="${beat===i?'active':''}">${i+1}</span>`).join('')}</div>
@@ -35,15 +49,15 @@ export function createProgressionScreen({app,storage,navigation,bindNavigation})
  <div class="bass-answer-actions">${button('bass-answer','▶ השמע את רצף הבס שלי','bass-secondary',!filled)}${button('check-bass','בדוק תשובה','next',!filled||!heard)}</div><div class="bass-feedback" role="status">${r.result?`זיהיתם ${r.result.count} מתוך 4 צלילים. אפשר לתקן ולבדוק שוב.`:heard?'':'האזינו למהלך לפני בדיקת התשובה.'}</div>`:
  `<h2>${r.completed?'כל הכבוד! הוצאתם את המהלך נכון':'הבס נכון! עכשיו זהו את סוגי האקורדים'}</h2><p class="bass-help">הקשיבו למהלך או לכל אקורד בנפרד. בחרו מז׳ור או מינור לכל צליל בס, והשוו את המהלך שלכם למקור.</p>
  <div class="progression-chords">${r.answer.map((midi,i)=>`<section class="progression-chord ${r.qualityResult?(r.qualityResult.matches[i]?'correct':'wrong'):''}"><span class="muted">אקורד ${i+1}</span><h3>${rootNames[i].hebrew} <span dir="ltr" lang="en">${rootNames[i].english}</span></h3>${button('chord-'+i,`▶ השמע אקורד ${i+1}`,'bass-secondary')}
- <div class="progression-quality" role="group" aria-label="סוג אקורד ${i+1}">${[['major','מז׳ור'],['minor','מינור']].map(([value,label])=>`<button data-progression-quality="${i}:${value}" aria-pressed="${r.qualities[i]===value}" ${r.completed?'disabled':''}>${label}</button>`).join('')}</div>${r.qualityResult?`<p>${r.qualityResult.matches[i]?'✓ נכון':'× נסו שוב'}</p>`:''}</section>`).join('')}</div>
+ <div class="progression-quality" role="group" aria-label="סוג אקורד ${i+1}">${[['major','מז׳ור',CHORDS[1].symbol],['minor','מינור',CHORDS[2].symbol]].map(([value,label,english])=>`<button data-progression-quality="${i}:${value}" aria-pressed="${r.qualities[i]===value}" ${r.completed?'disabled':''}>${label}<small class="interval-english" lang="en" dir="ltr">${english}</small></button>`).join('')}</div>${r.qualityResult?`<p>${r.qualityResult.matches[i]?'✓ נכון':'× נסו שוב'}</p>`:''}</section>`).join('')}</div>
  <div class="bass-answer-actions">${button('answer','▶ השמע את המהלך שלי','bass-secondary',!chosen)}${button('check-quality','בדוק תשובה','next',!chosen||r.completed)}</div><div class="bass-feedback" role="status">${r.qualityResult?`זיהיתם ${r.qualityResult.count} מתוך 4 אקורדים${r.completed?'.':'. אפשר לתקן ולנסות שוב.'}`:''}</div>
- ${r.completed?`<section class="bass-solution progression-success"><h3>זה המהלך שהוצאתם</h3><ol>${bassChords(r.q).map((c,i)=>`<li><strong lang="en" dir="ltr">${rootNames[i].english}${c.quality==='minor'?'m':''}</strong><span>${rootNames[i].hebrew} ${c.quality==='major'?'מז׳ור':'מינור'}</span></li>`).join('')}</ol>${button('success-play','▶ השמע את המהלך','bass-secondary')}${button('new','מהלך חדש →','next')}</section>`:''}`}
+ ${r.completed?`<section class="bass-solution progression-success"><h3>זה המהלך שהוצאתם</h3><ol>${bassChords(r.q).map((c,i)=>`<li><strong lang="en" dir="ltr">${rootNames[i].english}${c.quality==='minor'?'m':''}</strong><span>${rootNames[i].hebrew} ${c.quality==='major'?'מז׳ור':'מינור'}</span><small lang="en" dir="ltr">${c.quality==='major'?CHORDS[1].symbol:CHORDS[2].symbol}</small></li>`).join('')}</ol>${button('success-play','▶ השמע את המהלך','bass-secondary')}${!courseComplete?button('new',mode==='guided'?'המהלך הבא →':'מהלך חדש →','next'):''}</section>`:''}`}
  </section><section class="stats bass-stats" aria-label="ההצלחה שלכם בתרגיל"><div><strong>${state.stats.completed}</strong><span>מהלכים שהוצאתם במלואם</span></div><div><strong>${state.stats.bassFirst}</strong><span>בס נכון בהגשה הראשונה</span></div><div><strong>${state.stats.qualityFirst}</strong><span>סוגי אקורדים נכונים בהגשה הראשונה</span></div></section><p class="save-note">◈ המקום והתשובות נשמרים בדפדפן, בנפרד מתרגיל הבס</p>${notice?`<p class="notice" role="alert">${notice}</p>`:''}</main><p class="piano-credit">פסנתר: Salamander Grand Piano V3 · Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a></p>`;
  const keyboard=document.querySelector('.bass-keyboard-scroll');if(keyboard)keyboard.scrollLeft=scroll;
- bindNavigation();on('full',()=>listen());on('bass',()=>listen('bass'));on('stop',()=>{cancel();render();});
+ bindNavigation();on('guided',()=>changeMode('guided'));on('free',()=>changeMode('free'));on('continue-free',()=>changeMode('free'));on('full',()=>listen());on('bass',()=>listen('bass'));on('stop',()=>{cancel();render();});
  on('bass-answer',()=>{if(filled&&bassStage)listen('bass-answer');});on('answer',()=>{if(chosen&&!bassStage)listen('answer');});on('success-play',()=>listen());on('new',()=>{if(r.completed)next();});
  on('check-bass',()=>{if(!bassStage||!heard||!filled)return;state=submitProgressionBass(state);preview=null;save();render();});
- on('check-quality',()=>{if(bassStage||!chosen||r.completed)return;state=submitProgressionQualities(state);save();render();});
+ on('check-quality',()=>{if(bassStage||!chosen||r.completed)return;state=submitProgressionQualities(state);if(mode==='guided'&&state.current.completed)guided.completed=Math.max(guided.completed,guided.index+1);save();render();});
  document.querySelectorAll('[data-progression-slot]').forEach(b=>b.onclick=()=>{if(!bassStage)return;r.active=Number(b.dataset.progressionSlot);preview=null;save();render();});
  document.querySelectorAll('[data-progression-key]').forEach(b=>b.onclick=()=>{preview=Number(b.dataset.progressionKey);listen('key',preview);});
  on('insert',()=>{if(!bassStage||preview===null)return;r.answer[r.active]=preview;r.active=Math.min(3,r.active+1);r.result=null;preview=null;save();render();});

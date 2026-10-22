@@ -34,3 +34,14 @@ test('progression roots use their diatonic spelling in sharp, flat and relative 
  const q={patternIndex,key};progressionRootNames(q).forEach((name,i)=>{assert.equal(name.pitchClass,bassChords(q)[i].bass%12);assert.ok(!name.english.includes('/'));assert.ok(!name.hebrew.includes('/'));});
  }
 });
+
+test('guided progression course validates saved progress independently from legacy free practice',async()=>{
+ const {newGuidedProgression,loadGuidedProgression,PROGRESSION_GUIDED_KEY}=await import('../src/progression-course.js');
+ const s=newGuidedProgression();assert.equal(s.questions.length,10);assert.equal(new Set(s.questions.map(q=>q.key)).size,10);
+ const counts=BASS_PATTERNS.map((_,i)=>s.questions.filter(q=>q.patternIndex===i).length);assert.ok(Math.max(...counts)-Math.min(...counts)<=1);
+ s.practice.current=newProgressionRound(s.questions[0]);s.practice.current.answer=bassChords(s.questions[0]).map(c=>c.bass);s.practice=submitProgressionBass(s.practice);
+ const legacy=initialProgression();legacy.stats.completed=4;
+ const storage={getItem:key=>key===PROGRESSION_GUIDED_KEY?JSON.stringify(s):JSON.stringify(legacy)};
+ assert.deepEqual(loadGuidedProgression(storage),s);assert.deepEqual(loadProgression(storage),legacy);assert.equal(loadGuidedProgression(storage).completed,0);
+ const invalid=structuredClone(s);invalid.completed=1;assert.equal(loadGuidedProgression({getItem:()=>JSON.stringify(invalid)}).completed,0);
+});

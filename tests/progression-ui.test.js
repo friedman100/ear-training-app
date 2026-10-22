@@ -5,12 +5,13 @@ import test from 'node:test';
 import {BASS_KEY,bassChords} from '../src/bass.js';
 import {BASS_MODE_KEY} from '../src/bass-course.js';
 import {PROGRESSION_KEY,initialProgression,newProgressionRound,submitProgressionBass} from '../src/progression.js';
+import {PROGRESSION_GUIDED_KEY,PROGRESSION_MODE_KEY,newGuidedProgression} from '../src/progression-course.js';
 import {initialState} from '../src/logic.js';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js')),source=await readFile('dist/assets/'+asset,'utf8');
 const flush=async()=>{for(let i=0;i<60;i++)await Promise.resolve();};
 function setup(saved={},controlled=false,guided=false){
  const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';w.structuredClone=structuredClone;w.notes=[];w.stops=0;w.audioTimers=[];
- if(!guided)w.localStorage.setItem(BASS_MODE_KEY,'free');
+ if(!guided){w.localStorage.setItem(BASS_MODE_KEY,'free');w.localStorage.setItem(PROGRESSION_MODE_KEY,'free');}
  for(const [key,value]of Object.entries(saved))w.localStorage.setItem(key,value);
  w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const note={connect(){},start(t){this.t=t;},stop(){w.stops++;},playbackRate:{value:1}};w.notes.push(note);return note;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});w.setTimeout=fn=>{if(controlled)w.audioTimers.push(fn);else queueMicrotask(fn);return 1;};w.eval(source);w.document.querySelector('[data-section="progression"]').click();return w;
@@ -45,4 +46,27 @@ test('saved D-major progression shows F sharp minor consistently after bass and 
  const w=setup({[PROGRESSION_KEY]:JSON.stringify(s)}),d=w.document;
  assert.match(d.querySelectorAll('.progression-chord h3')[1].textContent,/פה דיאז/);assert.equal(d.querySelectorAll('.progression-chord h3 [lang="en"]')[1].textContent,'F♯');
  choose(w,['major','minor','minor','major']);click(w,'check-quality');const result=d.querySelector('.progression-success').textContent;assert.match(result,/F♯m/);assert.match(result,/פה דיאז מינור/);assert.ok(!result.includes('G♭'));assert.ok(!result.includes('/'));await w.happyDOM.close();
+});
+
+const course=w=>JSON.parse(w.localStorage.getItem(PROGRESSION_GUIDED_KEY));
+test('guided progression counts ten complete two-stage rounds, persists through reload, and keeps free practice separate',async()=>{
+ const legacy=initialProgression();legacy.stats={completed:2,bassFirst:1,qualityFirst:1,assisted:1};const legacySaved=JSON.stringify(legacy);
+ let w=setup({[PROGRESSION_KEY]:legacySaved},false,true),d=w.document;
+ assert.equal(d.querySelector('#progression-guided').className,'selected');assert.equal(d.querySelector('[role="progressbar"]').getAttribute('aria-valuenow'),'0');
+ for(let i=0;i<10;i++){
+ assert.equal(course(w).index,i);assert.equal(course(w).completed,i);click(w,'bass');await flush();const chords=bassChords(course(w).practice.current.q),notes=chords.map(c=>c.bass);
+ if(i===0){const wrong=[...notes];wrong[0]=36+(wrong[0]-36+1)%12;await enter(w,wrong);click(w,'check-bass');assert.equal(course(w).completed,0);}
+ await enter(w,notes);click(w,'check-bass');assert.equal(course(w).completed,i);assert.equal(d.querySelectorAll('[data-progression-quality]').length,8);
+ assert.equal(d.querySelector('[data-progression-quality="0:major"] .interval-english').textContent,'Major');assert.equal(d.querySelector('[data-progression-quality="0:minor"] .interval-english').textContent,'Minor');
+ const qualities=chords.map(c=>c.quality);
+ if(i===0){const wrong=[...qualities];wrong[0]=wrong[0]==='major'?'minor':'major';choose(w,wrong);click(w,'check-quality');assert.equal(course(w).completed,0);assert.equal(d.querySelector('#progression-new'),null);}
+ choose(w,qualities);click(w,'check-quality');assert.equal(course(w).completed,i+1);assert.equal(course(w).practice.stats.completed,i+1);assert.equal(d.querySelector('[role="progressbar"]').getAttribute('aria-valuenow'),String(i+1));click(w,'success-play');await flush();assert.equal(course(w).completed,i+1);
+ if(i===4){
+ const saved={[PROGRESSION_KEY]:w.localStorage.getItem(PROGRESSION_KEY),[PROGRESSION_GUIDED_KEY]:w.localStorage.getItem(PROGRESSION_GUIDED_KEY),[PROGRESSION_MODE_KEY]:'guided'};await w.happyDOM.close();w=setup(saved,false,true);d=w.document;assert.equal(course(w).completed,5);assert.ok(d.querySelector('.progression-success'));
+ click(w,'free');assert.equal(d.querySelector('[role="progressbar"]'),null);assert.equal(stored(w).stats.completed,2);const guidedSaved=w.localStorage.getItem(PROGRESSION_GUIDED_KEY);click(w,'full');await flush();const chord=bassChords(stored(w).current.q);await enter(w,chord.map(c=>c.bass));click(w,'check-bass');choose(w,chord.map(c=>c.quality));click(w,'check-quality');assert.equal(stored(w).stats.completed,3);assert.equal(w.localStorage.getItem(PROGRESSION_GUIDED_KEY),guidedSaved);click(w,'guided');assert.equal(course(w).completed,5);
+ }
+ if(i<9)click(w,'new');
+ }
+ assert.ok(d.querySelector('.bass-course-success'));assert.equal(d.querySelector('#progression-new'),null);assert.equal(course(w).practice.stats.bassFirst,9);assert.equal(course(w).practice.stats.qualityFirst,9);assert.equal(course(w).practice.stats.assisted,10);assert.equal(stored(w).stats.completed,3);
+ click(w,'continue-free');assert.equal(d.querySelector('#progression-free').className,'selected');click(w,'guided');assert.ok(d.querySelector('.bass-course-success'));await w.happyDOM.close();
 });
