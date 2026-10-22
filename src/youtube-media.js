@@ -18,7 +18,7 @@ export function createYouTubeMedia({window,document,loadAPI=()=>loadYouTube(wind
  function status(message){error=message;const el=document.getElementById('song-youtube-status');if(el)el.textContent=message;}
  function rates(){const select=document.getElementById('song-rate');if(!select)return;const available=ready?(player.getAvailablePlaybackRates?.()||[1]):[];for(const option of select.options)option.disabled=!available.includes(Number(option.value));select.disabled=!ready;if(ready&&available.length===1)status('הסרטון הזה תומך במהירות רגילה בלבד.');}
  function fail(message){ready=false;paused=true;clearInterval(timer);clearTimeout(readyTimer);status(message);emit('pause');rates();}
- function destroy(){generation++;active=false;ready=false;paused=true;clearInterval(timer);clearTimeout(readyTimer);player?.destroy();player=null;}
+ function destroy(){generation++;active=false;ready=false;paused=true;clearInterval(timer);clearTimeout(readyTimer);player?.destroy();player=null;length=0;rate=1;}
  async function mount(id){
  destroy();active=true;videoId=id;const request=generation;status('טוען את נגן YouTube…');rates();
  try{
@@ -26,7 +26,7 @@ export function createYouTubeMedia({window,document,loadAPI=()=>loadYouTube(wind
  const YT=await loadAPI();if(!active||request!==generation)return;
  readyTimer=setTimeout(()=>fail('הנגן לא נטען. נסו שוב או פתחו את הסרטון ב־YouTube.'),15000);
  player=new YT.Player('song-youtube-frame',{videoId:id,width:'100%',height:'100%',playerVars:{controls:1,playsinline:1,autoplay:0,origin:window.location.origin},events:{
- onReady:()=>{if(!active||request!==generation)return;clearTimeout(readyTimer);ready=true;status('');player.cueVideoById({videoId:id,startSeconds:position});length=player.getDuration()||length;rates();emit('loadedmetadata');timer=setInterval(()=>{if(!ready)return;position=player.getCurrentTime()||0;length=player.getDuration()||length;emit('timeupdate');},100);},
+ onReady:()=>{if(!active||request!==generation)return;clearTimeout(readyTimer);ready=true;status('');player.cueVideoById({videoId:id,startSeconds:position});length=player.getDuration()||length;rate=player.getPlaybackRate()||1;rates();emit('loadedmetadata');timer=setInterval(()=>{if(!ready)return;position=player.getCurrentTime()||0;length=player.getDuration()||length;emit('timeupdate');},100);},
  onStateChange:event=>{if(!ready||!active||request!==generation)return;paused=event.data!==1;if(event.data===1){beforePlay();emit('play');}else if(event.data===0)emit('ended');else emit('pause');},
  onPlaybackRateChange:()=>{if(!active||request!==generation)return;rate=player.getPlaybackRate()||1;const select=document.getElementById('song-rate');if(select&&![...select.options].some(option=>Number(option.value)===rate)){const option=document.createElement('option');option.value=String(rate);option.textContent=rate+'×';select.append(option);}emit('timeupdate');},
  onAutoplayBlocked:()=>{if(active&&request===generation)status('לחצו על כפתור הניגון בתוך סרטון YouTube כדי להתחיל.');},
