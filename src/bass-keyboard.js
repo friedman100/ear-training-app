@@ -1,0 +1,5 @@
+import {keyboardNotes,noteName,LETTER_NAMES,pc} from './bass.js';
+// Shared audition keyboard: each exercise owns its answer state and click handlers.
+export function renderBassKeyboard(previewNote=null,keyAttribute='data-bass-key'){
+ return `<div class="bass-keyboard-scroll"><div class="bass-keyboard" role="group" aria-label="מקלדת לחיפוש צלילי בס">${keyboardNotes().map((midi,i)=>{const black=[1,3,6,8,10].includes(pc(midi)),whiteBefore=keyboardNotes().slice(0,i).filter(n=>![1,3,6,8,10].includes(pc(n))).length;return `<button ${keyAttribute}="${midi}" aria-pressed="${previewNote===midi}" class="bass-key ${previewNote===midi?'previewed':''} ${black?'black':'white'}" style="--position:${black?whiteBefore-.32:whiteBefore}" aria-label="${noteName(midi)}, אוקטבה ${Math.floor(midi/12)-1}"><span lang="en" dir="ltr">${LETTER_NAMES[pc(midi)].split(' / ')[0]}</span><small>${Math.floor(midi/12)-1}</small></button>`;}).join('')}</div></div><p class="bass-keyboard-hint">המקלדת ניתנת לגלילה לצדדים במסך צר.</p>`;
+}

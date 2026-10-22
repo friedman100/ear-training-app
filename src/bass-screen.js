@@ -1,5 +1,6 @@
+import {renderBassKeyboard} from './bass-keyboard.js';
 import {BASS_GUIDED_KEY,BASS_MODE_KEY,BASS_GOAL,loadGuidedBass,loadBassMode} from './bass-course.js';
-import {BASS_KEY,bassChords,bassPlan,bassAnswerPlan,keyboardNotes,noteName,LETTER_NAMES,pc,loadBass,makeBassQuestion,newBassRound,submitBass,finishBass} from './bass.js';
+import {BASS_KEY,bassChords,bassPlan,bassAnswerPlan,noteName,LETTER_NAMES,pc,loadBass,makeBassQuestion,newBassRound,submitBass,finishBass} from './bass.js';
 import {playBassSequence,stop} from './audio.js';
 export function createBassScreen({app,storage,navigation,bindNavigation}){
  let freeState=loadBass(storage),guided=loadGuidedBass(storage),mode=loadBassMode(storage);
@@ -40,8 +41,7 @@ export function createBassScreen({app,storage,navigation,bindNavigation}){
  <p class="bass-help">לחיצה על קליד משמיעה אותו בלבד. מצאתם את הצליל? לחצו על „הכנס למשבצת”. אפשר לחפש גם בגיטרה. אותו צליל באוקטבה אחרת מתקבל.</p>
  <div class="bass-slots" aria-label="ארבעת צלילי הבס — לפי סדר ההשמעה">${r.answer.map((midi,i)=>`<button data-bass-slot="${i}" aria-pressed="${r.active===i}" aria-label="צליל ${i+1}${midi===null?'':`, ${noteName(midi)}`}" class="bass-slot ${r.active===i?'active':''} ${result?(result.matches[i]?'correct':'wrong'):''}"><small>צליל ${i+1}</small><strong>${midi===null?'?':noteName(midi)}</strong>${midi===null?'':`<span lang="en" dir="ltr">${LETTER_NAMES[pc(midi)]}</span>`}${result?`<span>${result.matches[i]?'✓ נכון':'× נסו שוב'}</span>`:''}</button>`).join('')}</div>
  <p class="bass-slot-hint" role="status">${solved?'כל ארבעת הצלילים נכונים! אפשר להמשיך.':result?'אפשר לבחור משבצת ולתקן את הצליל.':`הקשיבו לקלידים וחפשו את צליל ${r.active+1}. לחצו על משבצת כדי לתקן אותה.`}</p>
- <div class="bass-keyboard-scroll"><div class="bass-keyboard" role="group" aria-label="מקלדת לחיפוש צלילי בס">${keyboardNotes().map((midi,i)=>{const black=[1,3,6,8,10].includes(pc(midi)),whiteBefore=keyboardNotes().slice(0,i).filter(n=>![1,3,6,8,10].includes(pc(n))).length;return `<button data-bass-key="${midi}" aria-pressed="${previewNote===midi}" class="bass-key ${previewNote===midi?'previewed':''} ${black?'black':'white'}" style="--position:${black?whiteBefore-.32:whiteBefore}" aria-label="${noteName(midi)}, אוקטבה ${Math.floor(midi/12)-1}"><span lang="en" dir="ltr">${LETTER_NAMES[pc(midi)].split(' / ')[0]}</span><small>${Math.floor(midi/12)-1}</small></button>`;}).join('')}</div></div>
- <p class="bass-keyboard-hint">המקלדת ניתנת לגלילה לצדדים במסך צר.</p>
+ ${renderBassKeyboard(previewNote)}
  <div class="bass-preview-actions"><p role="status">${previewNote===null?'אפשר לשמוע כמה קלידים שרוצים לפני שבוחרים תשובה.':`הצליל שבחרתם להאזנה: <strong>${noteName(previewNote)}</strong> <span lang="en" dir="ltr">${LETTER_NAMES[pc(previewNote)]}</span>`}</p>${button('insert',`הכנס למשבצת ${r.active+1}`,'bass-secondary',previewNote===null||solved)}</div>
  <div class="bass-answer-actions">${button('answer','▶ השמע את התשובה שלי','bass-secondary',!filled)}${button('check','בדוק תשובה','next',!filled||!heard||solved)}</div>
  ${!heard?'<p class="bass-slot-hint">האזינו למהלך לפני בדיקת התשובה.</p>':''}
