@@ -76,3 +76,5 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 @media(max-width:760px){.path-navigation{flex-wrap:wrap}.path-navigation button{flex:1 1 45%}.bass-practice{padding:18px 13px}.bass-slots{gap:8px}.bass-slot{min-height:104px}.bass-slot strong{font-size:15px}.bass-slot>span{font-size:10px}.bass-listen-actions{gap:8px}.bass-listen-actions .play{padding:12px 15px;min-width:0;font-size:14px}.bass-secondary{padding:11px 12px;font-size:14px}.bass-help{font-size:13px}.bass-feedback h2{font-size:18px}.bass-keyboard-scroll{margin-right:-3px;margin-left:-3px}.bass-solution ol{gap:12px;font-size:13px}}
 
 .bass-keyboard-hint{display:none}@media(max-width:760px){.bass-keyboard-hint{display:block;font-size:11px;color:#74866c}}
+
+.bass-preview-actions{margin:10px auto 20px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}.bass-preview-actions p{font-size:13px}.bass-key.previewed.white{background:#d9e9c8;box-shadow:inset 0 0 0 3px #87a86f}.bass-key.previewed.black{background:#537f48;box-shadow:inset 0 0 0 2px #adc88d}

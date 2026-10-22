@@ -14,7 +14,7 @@ function setup(saved={}){
 }
 const state=w=>JSON.parse(w.localStorage.getItem(BASS_KEY));
 const click=(w,id)=>w.document.getElementById('bass-'+id).click();
-const enter=async(w,notes)=>{for(let i=0;i<4;i++){w.document.querySelector(`[data-bass-slot="${i}"]`).click();w.document.querySelector(`[data-bass-key="${notes[i]}"]`).click();await flush();}};
+const enter=async(w,notes)=>{for(let i=0;i<4;i++){w.document.querySelector(`[data-bass-slot="${i}"]`).click();w.document.querySelector(`[data-bass-key="${notes[i]}"]`).click();await flush();click(w,'insert');}};
 test('bass exercise supports hidden solution, exact notes, fixes, replay, refresh, aid and next without changing other exercises',async()=>{
  const existing={'ear-training-v1':JSON.stringify({...initialState(),stage:3}),'ear-training-chords-v1':JSON.stringify({version:1,stage:2,history:[],complete:false,pending:null,mode:'guided',selected:[1,2]})};
  let w=setup(existing),d=w.document;
@@ -30,4 +30,13 @@ test('bass exercise supports hidden solution, exact notes, fixes, replay, refres
 });
 test('navigation cancels bass audio and cannot start late audio after departure',async()=>{
  const w=setup(),d=w.document;click(w,'full');d.querySelector('[data-section="chords"]').click();await flush();assert.equal(w.notes.length,0);assert.ok(d.querySelector('#chord-listen'));await w.happyDOM.close();
+});
+
+test('auditioning piano keys leaves answers, active slot, results and attempts unchanged until explicit insertion',async()=>{
+ const w=setup(),d=w.document,before=w.localStorage.getItem(BASS_KEY);
+ assert.ok(d.querySelector('#bass-insert').disabled);
+ for(const note of [36,37,43,48]){d.querySelector('[data-bass-key="'+note+'"]').click();await flush();assert.equal(w.localStorage.getItem(BASS_KEY),before);assert.equal(d.querySelector('[data-bass-slot="0"]').getAttribute('aria-pressed'),'true');}
+ assert.equal(w.notes.length,4);assert.equal(d.querySelector('[data-bass-key="48"]').getAttribute('aria-pressed'),'true');
+ click(w,'insert');assert.deepEqual(state(w).current.answer,[48,null,null,null]);assert.equal(state(w).current.active,1);assert.equal(state(w).current.attempts,0);assert.ok(d.querySelector('#bass-insert').disabled);
+ click(w,'full');await flush();await enter(w,bassChords(state(w).current.q).map(c=>c.bass));click(w,'check');const checked=w.localStorage.getItem(BASS_KEY);d.querySelector('[data-bass-key="38"]').click();await flush();assert.equal(w.localStorage.getItem(BASS_KEY),checked);assert.equal(d.querySelectorAll('.bass-slot.correct').length,4);await w.happyDOM.close();
 });
