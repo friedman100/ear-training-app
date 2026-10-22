@@ -1,5 +1,6 @@
 import catalog from './songs/catalog.json' with {type:'json'};
 import {pc} from './bass.js';
+export const songSource=song=>song.source??{type:'audio',src:song.audio};
 export const SONGS=catalog;
 export const SONG_KEY='ear-training-songs-v1';
 export const findSong=id=>SONGS.find(song=>song.id===id);
@@ -36,10 +37,11 @@ export function songAnswerPlan(song,part,round,kind='qualities',rate=1){
  return [{midi:bass,offset:i*spacing,level:.75},...[root,root+(quality==='major'?4:3),root+7].map(midi=>({midi,offset:i*spacing,level:.32}))];
  });return {plan,spacing};
 }
+function validSource(song){const source=songSource(song);return !(song.source&&song.audio)&&(source.type==='audio'?/^songs\/[a-z0-9-]+\.mp3$/.test(source.src):source.type==='youtube'&&/^[A-Za-z0-9_-]{11}$/.test(source.videoId));}
 export function validateSongCatalog(songs){
  if(!Array.isArray(songs)||!songs.length||new Set(songs.map(s=>s.id)).size!==songs.length)throw Error('Invalid songs');
  for(const song of songs){
- if(!/^[a-z0-9-]+$/.test(song.id)||!song.title||!song.artist||!song.difficulty||!/^songs\/[a-z0-9-]+\.mp3$/.test(song.audio)||!Number.isFinite(song.duration)||song.duration<=0||!Number.isFinite(song.bpm)||song.bpm<=0||!Array.isArray(song.parts)||!song.parts.length||new Set(song.parts.map(p=>p.id)).size!==song.parts.length)throw Error('Invalid song');
+ if(!/^[a-z0-9-]+$/.test(song.id)||!song.title||!song.artist||!song.difficulty||!validSource(song)||!Number.isFinite(song.duration)||song.duration<=0||!Number.isFinite(song.bpm)||song.bpm<=0||!Array.isArray(song.parts)||!song.parts.length||new Set(song.parts.map(p=>p.id)).size!==song.parts.length)throw Error('Invalid song');
  for(const part of song.parts)if(!/^[a-z0-9-]+$/.test(part.id)||!part.name||!Number.isFinite(part.start)||!Number.isFinite(part.end)||part.start<0||part.end<=part.start||part.end>song.duration||!Number.isFinite(part.beatsPerChord)||part.beatsPerChord<=0||!Array.isArray(part.chords)||part.chords.length<2||part.chords.length>12||part.chords.some(c=>!Number.isInteger(c.root)||c.root<36||c.root>84||!['major','minor'].includes(c.quality)||!c.english||!c.hebrew))throw Error('Invalid song part');
  }return true;
 }

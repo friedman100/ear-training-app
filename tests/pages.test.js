@@ -30,6 +30,6 @@ test('published singing page resolves shared controllers, styles and piano sampl
 });
 
 test('published demo song is the committed MP3 under the project-site path',async()=>{
- const {SONGS}=await import('../src/songs.js');
- for(const song of SONGS){assert.deepEqual(await readFile('dist/'+song.audio),await readFile('public/'+song.audio));const url=new URL(song.audio,'https://example.test/ear-training-app/');assert.ok(url.pathname.startsWith('/ear-training-app/songs/'));}
+ const {SONGS,songSource}=await import('../src/songs.js');
+ for(const song of SONGS){const source=songSource(song);if(source.type!=='audio')continue;assert.deepEqual(await readFile('dist/'+source.src),await readFile('public/'+source.src));const url=new URL(source.src,'https://example.test/ear-training-app/');assert.ok(url.pathname.startsWith('/ear-training-app/songs/'));}
 });

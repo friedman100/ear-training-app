@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {SONGS,SONG_KEY,initialSongs,openSongPart,songEntry,newSongRound,submitSong,loadSongs,songAnswerPlan,checkSongBass,validateSongCatalog} from '../src/songs.js';
 test('catalog and committed original recording define timed parts with accurate root-position answer playback',async()=>{
- assert.equal(validateSongCatalog(SONGS),true);assert.equal(SONGS.length,1);const song=SONGS[0];assert.ok(song.duration>=45&&song.duration<=90);
+ assert.equal(validateSongCatalog(SONGS),true);assert.ok(SONGS.length>=1);const song=SONGS[0];assert.ok(song.duration>=45&&song.duration<=90);
  const mp3=await readFile('public/'+song.audio);assert.ok(mp3.length>500000);assert.ok(mp3.subarray(0,3).toString()==='ID3'||mp3[0]===255);
  for(const part of song.parts){assert.equal(part.chords.length,4);const round=newSongRound(part);round.answer=part.chords.map(c=>36+c.root%12);round.qualities=part.chords.map(c=>c.quality);
  for(const rate of [.5,.75,1]){const {plan,spacing}=songAnswerPlan(song,part,round,'qualities',rate);assert.equal(spacing,60/song.bpm*part.beatsPerChord/rate);part.chords.forEach((chord,i)=>{const events=plan.slice(i*4,i*4+4);assert.deepEqual(events.map(e=>e.midi),[36+chord.root%12,48+chord.root%12,48+chord.root%12+(chord.quality==='major'?4:3),55+chord.root%12]);assert.ok(events.every(e=>e.offset===i*spacing));});}
