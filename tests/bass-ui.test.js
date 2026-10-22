@@ -3,11 +3,13 @@ import {readFile,readdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {BASS_KEY,bassChords} from '../src/bass.js';
+import {BASS_GUIDED_KEY,BASS_MODE_KEY,newGuidedBass} from '../src/bass-course.js';
 import {initialState} from '../src/logic.js';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js')),source=await readFile('dist/assets/'+asset,'utf8');
 const flush=async()=>{for(let i=0;i<60;i++)await Promise.resolve();};
-function setup(saved={},controlled=false){
+function setup(saved={},controlled=false,guided=false){
  const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';w.structuredClone=structuredClone;w.notes=[];w.stops=0;w.audioTimers=[];
+ if(!guided)w.localStorage.setItem(BASS_MODE_KEY,'free');
  for(const [key,value]of Object.entries(saved))w.localStorage.setItem(key,value);
  w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const note={connect(){},start(t){this.t=t;},stop(){w.stops++;},playbackRate:{value:1}};w.notes.push(note);return note;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
  w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});w.setTimeout=fn=>{if(controlled)w.audioTimers.push(fn);else queueMicrotask(fn);return 1;};w.eval(source);w.document.querySelector('[data-section="bass"]').click();return w;
@@ -47,4 +49,25 @@ test('stop button stays beside playback controls and stops every scheduled note 
  click(w,'full');await flush();assert.equal(w.notes.length,16);assert.equal(d.querySelector('#bass-stop').disabled,false);
  const stops=w.stops;click(w,'stop');assert.equal(w.stops,stops+16);assert.ok(d.querySelector('#bass-stop').disabled);assert.equal(w.localStorage.getItem(BASS_KEY),before);
  w.audioTimers.forEach(fn=>fn());await flush();assert.ok(d.querySelector('#bass-stop').disabled);assert.equal(d.querySelectorAll('.bass-beats .active').length,0);await w.happyDOM.close();
+});
+
+const course=w=>JSON.parse(w.localStorage.getItem(BASS_GUIDED_KEY));
+test('guided bass requires ten solved progressions, allows help and retries, survives reload and stays separate from free practice',async()=>{
+ const legacy={version:1,current:null,stats:{completed:3,first:1,assisted:2,last:null}},savedFree=JSON.stringify(legacy);
+ let w=setup({[BASS_KEY]:savedFree},false,true),d=w.document;
+ assert.equal(d.querySelector('#bass-guided').className,'selected');assert.equal(d.querySelector('[role="progressbar"]').getAttribute('aria-valuenow'),'0');
+ for(let i=0;i<10;i++){
+ assert.equal(course(w).index,i);assert.equal(course(w).completed,i);
+ click(w,i===0?'full':'only');await flush();const answer=bassChords(course(w).practice.current.q).map(c=>c.bass);
+ if(i===0){const wrong=[...answer];wrong[0]=36+(wrong[0]-36+1)%12;await enter(w,wrong);click(w,'check');assert.equal(course(w).completed,0);assert.ok(d.querySelector('#bass-next').disabled);}
+ await enter(w,answer);click(w,'check');assert.equal(course(w).completed,i+1);assert.equal(course(w).practice.stats.completed,i+1);assert.equal(d.querySelector('[role="progressbar"]').getAttribute('aria-valuenow'),String(i+1));assert.ok(d.querySelector('#bass-check').disabled);
+ if(i===0){assert.equal(course(w).practice.stats.assisted,0);click(w,'only');await flush();assert.equal(course(w).practice.stats.assisted,1);click(w,'only');await flush();assert.equal(course(w).practice.stats.assisted,1);}
+ if(i===4){
+ const saved={[BASS_KEY]:w.localStorage.getItem(BASS_KEY),[BASS_GUIDED_KEY]:w.localStorage.getItem(BASS_GUIDED_KEY),[BASS_MODE_KEY]:'guided'};await w.happyDOM.close();w=setup(saved,false,true);d=w.document;assert.equal(course(w).completed,5);assert.equal(d.querySelectorAll('.bass-slot.correct').length,4);
+ click(w,'free');assert.equal(d.querySelector('[role="progressbar"]'),null);assert.equal(JSON.parse(w.localStorage.getItem(BASS_KEY)).stats.completed,3);const before=JSON.stringify(course(w));click(w,'full');await flush();await enter(w,bassChords(state(w).current.q).map(c=>c.bass));click(w,'check');click(w,'next');assert.equal(state(w).stats.completed,4);assert.equal(JSON.stringify(course(w)),before);click(w,'guided');assert.equal(course(w).completed,5);
+ }
+ if(i<9)click(w,'next');
+ }
+ assert.ok(d.querySelector('.bass-course-success'));assert.equal(d.querySelector('#bass-next'),null);assert.equal(course(w).practice.stats.first,9);assert.equal(course(w).practice.stats.assisted,10);assert.equal(state(w).stats.completed,4);
+ click(w,'continue-free');assert.equal(d.querySelector('#bass-free').className,'selected');click(w,'guided');assert.ok(d.querySelector('.bass-course-success'));await w.happyDOM.close();
 });

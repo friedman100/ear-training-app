@@ -25,3 +25,15 @@ test('retries, aid usage, reveals and refresh keep accurate first-attempt statis
  s.current=newBassRound({patternIndex:1,key:4});s.current.answer=bassChords(s.current.q).map(c=>c.bass);s=submitBass(s);s=finishBass(s);assert.equal(s.stats.first,1);assert.equal(s.stats.completed,2);
  assert.deepEqual(loadBass({getItem:()=>'{bad'}),initialBass());assert.throws(()=>checkBass({patternIndex:0,key:0},[36,null,45,41]));
 });
+
+test('guided course balances patterns, varies keys, prevents duplicates and preserves legacy free practice',async()=>{
+ const {makeBassCourse,loadGuidedBass,newGuidedBass,BASS_GUIDED_KEY}=await import('../src/bass-course.js');
+ for(const rng of [()=>0,()=>.999999,Math.random]){
+ const questions=makeBassCourse(rng),counts=BASS_PATTERNS.map((_,id)=>questions.filter(q=>q.patternIndex===id).length);
+ assert.equal(questions.length,10);assert.equal(new Set(questions.map(q=>q.key)).size,10);assert.equal(new Set(questions.map(q=>JSON.stringify(q))).size,10);assert.ok(Math.max(...counts)-Math.min(...counts)<=1);assert.ok(counts.every(n=>n>=1));
+ }
+ const legacy=initialBass();legacy.stats.completed=4;
+ const guided=newGuidedBass();guided.practice.current=newBassRound(guided.questions[0]);const storage={getItem:key=>key===BASS_GUIDED_KEY?JSON.stringify(guided):JSON.stringify(legacy)};
+ assert.deepEqual(loadGuidedBass(storage),guided);assert.deepEqual(loadBass(storage),legacy);
+ const invalid=structuredClone(guided);invalid.completed=3;assert.equal(loadGuidedBass({getItem:()=>JSON.stringify(invalid)}).completed,0);
+});
