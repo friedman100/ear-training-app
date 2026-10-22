@@ -10,9 +10,11 @@ test('all curated progressions in every key have matching root basses and identi
  const answer=chords.map(c=>c.bass);assert.equal(checkBass(q,answer).count,4);assert.equal(checkBass(q,answer.map(n=>n+12)).count,4);assert.equal(checkBass(q,answer.map(n=>36+(n-36+2)%12)).count,0);
  assert.deepEqual(bassAnswerPlan(answer).map(n=>n.midi),answer);
  }
+ assert.deepEqual(bassChords({patternIndex:4,key:0}).map(c=>[c.bass%12,c.quality]),[[0,'major'],[4,'minor'],[9,'minor'],[7,'major']]);
+ assert.deepEqual(bassChords({patternIndex:5,key:0}).map(c=>[c.bass%12,c.quality]),[[9,'minor'],[7,'major'],[5,'major'],[4,'major']]);
  assert.deepEqual(bassChords({patternIndex:0,key:0}).map(c=>c.bass%12),[0,7,9,5]);
  assert.deepEqual(bassChords({patternIndex:0,key:2}).map(c=>c.bass%12),[2,9,11,7]);
- const choices=new Set();for(let p=0;p<4;p++)for(let k=0;k<12;k++){let index=0;const values=[(p+.1)/4,(k+.1)/12];const q=makeBassQuestion(()=>values[index++]);choices.add(`${q.patternIndex}:${q.key}`);}assert.equal(choices.size,48);
+ const choices=new Set();for(let p=0;p<BASS_PATTERNS.length;p++)for(let k=0;k<12;k++){let index=0;const values=[(p+.1)/BASS_PATTERNS.length,(k+.1)/12];const q=makeBassQuestion(()=>values[index++]);choices.add(`${q.patternIndex}:${q.key}`);}assert.equal(choices.size,72);
  assert.notDeepEqual(makeBassQuestion(()=>0,{patternIndex:0,key:0}),{patternIndex:0,key:0});
 });
 test('retries, aid usage, reveals and refresh keep accurate first-attempt statistics without duplicate completion',()=>{

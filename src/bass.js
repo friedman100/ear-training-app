@@ -2,12 +2,15 @@ export const BASS_KEY='ear-training-bass-v1';
 export const BASS_BEAT=1.6;
 export const NOTE_NAMES=['דו','דו♯ / רה♭','רה','רה♯ / מי♭','מי','פה','פה♯ / סול♭','סול','סול♯ / לה♭','לה','לה♯ / סי♭','סי'];
 export const LETTER_NAMES=['C','C♯ / D♭','D','D♯ / E♭','E','F','F♯ / G♭','G','G♯ / A♭','A','A♯ / B♭','B'];
-// Four common diatonic progressions, transposed through all twelve keys.
+// Common major/minor progressions, transposed through all twelve keys.
+// Minor descent uses the major V from harmonic minor. Append entries to preserve saved indices.
 export const BASS_PATTERNS=[
  {id:'pop-major',degrees:[0,7,9,5],qualities:['major','major','minor','major']},
  {id:'pop-minor',degrees:[9,5,0,7],qualities:['minor','major','major','major']},
  {id:'cadence',degrees:[0,5,7,0],qualities:['major','major','major','major']},
- {id:'turnaround',degrees:[0,9,2,7],qualities:['major','minor','minor','major']}
+ {id:'turnaround',degrees:[0,9,2,7],qualities:['major','minor','minor','major']},
+ {id:'third-degree',degrees:[0,4,9,7],qualities:['major','minor','minor','major']},
+ {id:'minor-descent',degrees:[9,7,5,4],qualities:['minor','major','major','major']}
 ];
 export const pc=midi=>((midi%12)+12)%12;
 export const noteName=midi=>NOTE_NAMES[pc(midi)];
