@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {playChord,play,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
+import {playBassSequence,playChord,play,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
 test('sampled piano is softened on initial and repeated playback with a gentle overlapping release',async()=>{
  const original={AudioContext:globalThis.AudioContext,window:globalThis.window,fetch:globalThis.fetch,setTimeout:globalThis.setTimeout};
  const notes=[],envelopes=[],delays=[];
- globalThis.window={PIANO_SAMPLES:{60:'sample',67:'sample',72:'sample',76:'sample'}};
+ globalThis.window={PIANO_SAMPLES:Object.fromEntries(Array.from({length:49},(_,i)=>[48+i,'sample']))};
  globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});
  globalThis.setTimeout=(fn,ms)=>{delays.push(ms);queueMicrotask(fn);return 1;};
  globalThis.AudioContext=class{
  currentTime=10;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}
- createBufferSource(){const note={connect(){},start(t){this.startTime=t;},stop(t){if(t!==undefined)this.stopTime=t;}};notes.push(note);return note;}
+ createBufferSource(){const note={playbackRate:{value:1},connect(){},start(t){this.startTime=t;},stop(t){if(t!==undefined)this.stopTime=t;}};notes.push(note);return note;}
  createGain(){const events=[];envelopes.push(events);return {connect(){},gain:{setValueAtTime(v,t){events.push({type:'set',v,t});},linearRampToValueAtTime(v,t){events.push({type:'ramp',v,t});},exponentialRampToValueAtTime(v,t){events.push({type:'exponential',v,t});}}};}
  };
  try{
@@ -47,6 +47,13 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  const before=notes.length;await playChord(tones,broken);const played=notes.slice(before);assert.equal(played.length,tones.length);
  played.forEach((note,i)=>assert.ok(Math.abs(note.startTime-played[0].startTime-(broken?i*.85:0))<1e-9));
  assert.equal(envelopes.at(-1)[1].v,broken?1:1/Math.sqrt(tones.length));
+ }
+ const {bassPlan}=await import('../src/bass.js');
+ for(const bassOnly of [false,true]){
+ const plan=bassPlan({patternIndex:0,key:0},bassOnly),before=notes.length,beats=[];
+ await playBassSequence(plan,()=>{},i=>beats.push(i));const played=notes.slice(before);
+ assert.equal(played.length,bassOnly?4:16);assert.deepEqual(beats,[0,1,2,3]);
+ played.forEach((note,i)=>{assert.equal(note.playbackRate.value,plan[i].midi<48?.5:1);assert.ok(Math.abs(note.startTime-10.03-plan[i].offset)<1e-9);assert.ok(Math.abs(note.stopTime-note.startTime-1.65)<1e-9);});
  }
  }finally{Object.assign(globalThis,original);}
 });
