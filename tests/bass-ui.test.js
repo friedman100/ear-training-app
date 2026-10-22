@@ -6,11 +6,11 @@ import {BASS_KEY,bassChords} from '../src/bass.js';
 import {initialState} from '../src/logic.js';
 const asset=(await readdir('dist/assets')).find(f=>f.endsWith('.js')),source=await readFile('dist/assets/'+asset,'utf8');
 const flush=async()=>{for(let i=0;i<60;i++)await Promise.resolve();};
-function setup(saved={}){
- const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';w.structuredClone=structuredClone;w.notes=[];w.stops=0;
+function setup(saved={},controlled=false){
+ const w=new Window({url:'http://localhost:5173'});w.document.body.innerHTML='<div id="app"></div>';w.structuredClone=structuredClone;w.notes=[];w.stops=0;w.audioTimers=[];
  for(const [key,value]of Object.entries(saved))w.localStorage.setItem(key,value);
  w.AudioContext=class{currentTime=0;destination={};resume(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({});}createBufferSource(){const note={connect(){},start(t){this.t=t;},stop(){w.stops++;},playbackRate:{value:1}};w.notes.push(note);return note;}createGain(){return {connect(){},gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}}};}};
- w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});w.setTimeout=fn=>{queueMicrotask(fn);return 1;};w.eval(source);w.document.querySelector('[data-section="bass"]').click();return w;
+ w.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(8)});w.setTimeout=fn=>{if(controlled)w.audioTimers.push(fn);else queueMicrotask(fn);return 1;};w.eval(source);w.document.querySelector('[data-section="bass"]').click();return w;
 }
 const state=w=>JSON.parse(w.localStorage.getItem(BASS_KEY));
 const click=(w,id)=>w.document.getElementById('bass-'+id).click();
@@ -39,4 +39,12 @@ test('auditioning piano keys leaves answers, active slot, results and attempts u
  assert.equal(w.notes.length,4);assert.equal(d.querySelector('[data-bass-key="48"]').getAttribute('aria-pressed'),'true');
  click(w,'insert');assert.deepEqual(state(w).current.answer,[48,null,null,null]);assert.equal(state(w).current.active,1);assert.equal(state(w).current.attempts,0);assert.ok(d.querySelector('#bass-insert').disabled);
  click(w,'full');await flush();await enter(w,bassChords(state(w).current.q).map(c=>c.bass));click(w,'check');const checked=w.localStorage.getItem(BASS_KEY);d.querySelector('[data-bass-key="38"]').click();await flush();assert.equal(w.localStorage.getItem(BASS_KEY),checked);assert.equal(d.querySelectorAll('.bass-slot.correct').length,4);await w.happyDOM.close();
+});
+
+test('stop button stays beside playback controls and stops every scheduled note without changing answers',async()=>{
+ const w=setup({},true),d=w.document,before=w.localStorage.getItem(BASS_KEY);
+ assert.ok(d.querySelector('#bass-stop').disabled);assert.equal(d.querySelector('#bass-stop').parentElement,d.querySelector('#bass-full').parentElement);
+ click(w,'full');await flush();assert.equal(w.notes.length,16);assert.equal(d.querySelector('#bass-stop').disabled,false);
+ const stops=w.stops;click(w,'stop');assert.equal(w.stops,stops+16);assert.ok(d.querySelector('#bass-stop').disabled);assert.equal(w.localStorage.getItem(BASS_KEY),before);
+ w.audioTimers.forEach(fn=>fn());await flush();assert.ok(d.querySelector('#bass-stop').disabled);assert.equal(d.querySelectorAll('.bass-beats .active').length,0);await w.happyDOM.close();
 });
