@@ -96,3 +96,10 @@ dialog::backdrop{background:#142b2570}dialog{box-shadow:0 20px 80px #0003}
 .song-youtube {width:100%; min-height:200px; aspect-ratio:16/9; margin-bottom:16px; background:#111;}
 .song-youtube iframe,.song-youtube>div {width:100%;height:100%;min-height:200px;border:0;}
 #song-youtube-status {min-height:1.5em;}
+
+.song-part-heading{text-align:center;margin:22px auto;color:#214e3f}.song-part-heading p{margin:0 0 6px;font-weight:600}.song-part-heading h2{font-size:clamp(24px,3vw,34px);line-height:1.4;margin:0;font-weight:800}
+/* A focused success window in document flow keeps the visible YouTube player unobscured. */
+.song-section-success[open]{position:static;inset:auto;display:block;width:min(560px,calc(100% - 32px));margin:24px auto 40px;border:2px solid #a8c396;box-shadow:0 12px 36px #214e3f20;border-radius:22px;background:#fff;animation:song-success-appear .2s ease-out}
+.song-section-success .next{display:block;margin:16px auto}.song-section-success .quiet{margin-top:8px}
+@keyframes song-success-appear{from{opacity:.4;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.song-section-success[open]{animation:none}}
