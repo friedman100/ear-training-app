@@ -20,3 +20,11 @@ test('each song part preserves its two-stage answer, retries and completion inde
  assert.deepEqual(loadSongs({getItem:key=>key===SONG_KEY?JSON.stringify(s):null}),s);songEntry(s,song.id,a.id).round=newSongRound(a);assert.equal(songEntry(loadSongs({getItem:()=>JSON.stringify(s)}),song.id,a.id).completed,true);
  assert.deepEqual(loadSongs({getItem:()=>'{bad'}),initialSongs());
 });
+
+test('Kacha Vekacha has the supplied two-chord parts, exact roots and independent saved completion',()=>{
+ const song=SONGS.find(s=>s.id==='shalom-hanoch-kacha-vekacha');assert.equal(song.source.videoId,'kKTyqRlBNJI');assert.equal(song.title,'ככה וככה');assert.equal(song.artist,'שלום חנוך');
+ assert.deepEqual(song.parts.map(p=>[p.start,p.end]),[[4,86],[87,137]]);assert.equal(song.duration,undefined);assert.equal(song.bpm,undefined);assert.throws(()=>validateSongCatalog([{...song,duration:100}]));assert.throws(()=>validateSongCatalog([{...song,bpm:96}]));assert.throws(()=>validateSongCatalog([{...song,duration:-1}]));
+ assert.deepEqual(song.parts.map(p=>p.chords.map(c=>c.english+(c.quality==='minor'?'m':''))),[['Em','C'],['Am','Em']]);
+ let s=initialSongs();for(const part of song.parts){s=openSongPart(s,song,part);let r=songEntry(s,song.id,part.id).round;r.answer=part.chords.map(c=>36+c.root%12);s=submitSong(s,song,part);r=songEntry(s,song.id,part.id).round;assert.equal(r.stage,'qualities');r.qualities=part.chords.map(c=>c.quality);const {spacing,plan}=songAnswerPlan(song,part,r);assert.equal(spacing,2);assert.equal(plan.length,8);assert.ok(plan.every(p=>Number.isFinite(p.offset)));s=submitSong(s,song,part);assert.equal(songEntry(s,song.id,part.id).completed,true);}
+ assert.deepEqual(loadSongs({getItem:()=>JSON.stringify(s)}),s);assert.equal(s.songs['first-light'],undefined);
+});

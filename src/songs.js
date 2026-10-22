@@ -28,7 +28,8 @@ export function submitSong(state,song,part){
  return s;
 }
 export function songAnswerPlan(song,part,round,kind='qualities',rate=1){
- const spacing=60/song.bpm*part.beatsPerChord/rate;
+ // Without verified tempo, audition compares pitches at a neutral two seconds per chord.
+ const spacing=(song.bpm&&part.beatsPerChord?60/song.bpm*part.beatsPerChord:2)/rate;
  const plan=round.answer.flatMap((midi,i)=>{
  if(!Number.isInteger(midi))throw Error('Fill bass notes');
  const bass=36+pc(midi),root=48+pc(midi);
@@ -41,8 +42,11 @@ function validSource(song){const source=songSource(song);return !(song.source&&s
 export function validateSongCatalog(songs){
  if(!Array.isArray(songs)||!songs.length||new Set(songs.map(s=>s.id)).size!==songs.length)throw Error('Invalid songs');
  for(const song of songs){
- if(!/^[a-z0-9-]+$/.test(song.id)||!song.title||!song.artist||!song.difficulty||!validSource(song)||!Number.isFinite(song.duration)||song.duration<=0||!Number.isFinite(song.bpm)||song.bpm<=0||!Array.isArray(song.parts)||!song.parts.length||new Set(song.parts.map(p=>p.id)).size!==song.parts.length)throw Error('Invalid song');
- for(const part of song.parts)if(!/^[a-z0-9-]+$/.test(part.id)||!part.name||!Number.isFinite(part.start)||!Number.isFinite(part.end)||part.start<0||part.end<=part.start||part.end>song.duration||!Number.isFinite(part.beatsPerChord)||part.beatsPerChord<=0||!Array.isArray(part.chords)||part.chords.length<2||part.chords.length>12||part.chords.some(c=>!Number.isInteger(c.root)||c.root<36||c.root>84||!['major','minor'].includes(c.quality)||!c.english||!c.hebrew))throw Error('Invalid song part');
+ const youtube=songSource(song).type==='youtube';
+ const validDuration=youtube&&song.duration===undefined||Number.isFinite(song.duration)&&song.duration>0;
+ const validTempo=song.bpm===undefined||Number.isFinite(song.bpm)&&song.bpm>0;
+ if(!/^[a-z0-9-]+$/.test(song.id)||!song.title||!song.artist||!song.difficulty||!validSource(song)||!validDuration||!validTempo||!Array.isArray(song.parts)||!song.parts.length||new Set(song.parts.map(p=>p.id)).size!==song.parts.length)throw Error('Invalid song');
+ for(const part of song.parts)if(!/^[a-z0-9-]+$/.test(part.id)||!part.name||!Number.isFinite(part.start)||!Number.isFinite(part.end)||part.start<0||part.end<=part.start||(song.duration!==undefined&&part.end>song.duration)||((song.bpm!==undefined||part.beatsPerChord!==undefined)&&(!Number.isFinite(part.beatsPerChord)||part.beatsPerChord<=0||!Number.isFinite(song.bpm)))||!Array.isArray(part.chords)||part.chords.length<2||part.chords.length>12||part.chords.some(c=>!Number.isInteger(c.root)||c.root<36||c.root>84||!['major','minor'].includes(c.quality)||!c.english||!c.hebrew))throw Error('Invalid song part');
  }return true;
 }
 validateSongCatalog(SONGS);

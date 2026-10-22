@@ -6,7 +6,7 @@ export function playerMarkup(song){const source=song? songSource(song):null;retu
 export function createSongPlayer({document,createAudio=()=>document.createElement('audio'),beforePlay=()=>{},requestFrame=fn=>requestAnimationFrame(fn),cancelFrame=id=>cancelAnimationFrame(id)}){
  const audio=createAudio();audio.preload='metadata';let song=null,part=null,start=0,end=0,loop=false,pendingSeek=null,frame=null,active=false,error='';
  const $=id=>document.getElementById('song-'+id);
- const duration=()=>Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:song?.duration??0;
+ const duration=()=>Number.isFinite(audio.duration)&&audio.duration>0?audio.duration:song?.duration??Math.max(0,...(song?.parts??[]).map(part=>part.end));
  function seek(time){const value=Math.max(0,Math.min(duration(),time));try{audio.currentTime=value;pendingSeek=null;}catch{pendingSeek=value;}update();}
  function update(){
  if(!$('play'))return;const total=duration(),current=Number(audio.currentTime)||0;

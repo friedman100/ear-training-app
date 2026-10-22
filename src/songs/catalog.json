@@ -12,5 +12,58 @@
       {"id":"verse","name":"בית","start":0,"end":30,"beatsPerChord":4,"chords":[{"root":48,"quality":"major","english":"C","hebrew":"דו"},{"root":55,"quality":"major","english":"G","hebrew":"סול"},{"root":57,"quality":"minor","english":"A","hebrew":"לה"},{"root":53,"quality":"major","english":"F","hebrew":"פה"}]},
       {"id":"chorus","name":"פזמון","start":30,"end":60,"beatsPerChord":4,"chords":[{"root":48,"quality":"major","english":"C","hebrew":"דו"},{"root":55,"quality":"major","english":"G","hebrew":"סול"},{"root":57,"quality":"minor","english":"A","hebrew":"לה"},{"root":53,"quality":"major","english":"F","hebrew":"פה"}]}
     ]
+  },
+  {
+    "id": "shalom-hanoch-kacha-vekacha",
+    "title": "ככה וככה",
+    "artist": "שלום חנוך",
+    "difficulty": "מתחילים",
+    "description": "שני חלקים לתרגול: פתיח ובית, ופזמון. בכל חלק מצאו את שני האקורדים לפי סדר הופעתם.",
+    "source": {
+      "type": "youtube",
+      "videoId": "kKTyqRlBNJI"
+    },
+    "parts": [
+      {
+        "id": "intro-verse",
+        "name": "פתיח ובית",
+        "start": 4,
+        "end": 86,
+        "chords": [
+          {
+            "root": 52,
+            "quality": "minor",
+            "english": "E",
+            "hebrew": "מי"
+          },
+          {
+            "root": 48,
+            "quality": "major",
+            "english": "C",
+            "hebrew": "דו"
+          }
+        ]
+      },
+      {
+        "id": "chorus",
+        "name": "פזמון",
+        "start": 87,
+        "end": 137,
+        "chords": [
+          {
+            "root": 57,
+            "quality": "minor",
+            "english": "A",
+            "hebrew": "לה"
+          },
+          {
+            "root": 52,
+            "quality": "minor",
+            "english": "E",
+            "hebrew": "מי"
+          }
+        ]
+      }
+    ]
   }
 ]
