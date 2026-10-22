@@ -7,20 +7,22 @@ import {renderBassKeyboard} from './bass-keyboard.js';
 import {playBassSequence,stop} from './audio.js';
 export function createProgressionScreen({app,storage,navigation,bindNavigation}){
  let freeState=loadProgression(storage),guided=loadGuidedProgression(storage),mode=loadProgressionMode(storage);
- let state=mode==='guided'?guided.practice:freeState,visible=false,token=0,busy=false,playing=false,heard=false,beat=-1,preview=null,scroll=0,notice='';
+ let state=mode==='guided'?guided.practice:freeState,visible=false,token=0,busy=false,playing=false,heard=false,beat=-1,preview=null,scroll=0,notice='',successOpen=false;
  const button=(id,text,cls='',disabled=false)=>`<button id="progression-${id}" class="${cls}" ${disabled?'disabled':''}>${text}</button>`;
  const on=(id,fn)=>document.getElementById('progression-'+id)?.addEventListener('click',fn);
  function save(){if(mode==='guided')guided.practice=state;else freeState=state;try{storage.setItem(PROGRESSION_MODE_KEY,mode);if(mode==='guided')storage.setItem(PROGRESSION_GUIDED_KEY,JSON.stringify(guided));else storage.setItem(PROGRESSION_KEY,JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. אפשר להמשיך לתרגל.';}}
  function cancel(){token++;stop();busy=false;playing=false;beat=-1;}
  function next(){
- cancel();
+ successOpen=false;cancel();
  if(mode==='guided'){
  if(state.current){if(!state.current.completed||guided.index>=PROGRESSION_GOAL-1)return;guided.index++;}
  state.current=newProgressionRound(guided.questions[guided.index]);
  }else state.current=nextProgression(state.current?.q);
  heard=false;preview=null;save();render();
  }
- function changeMode(value){if(value===mode)return;cancel();save();mode=value;state=mode==='guided'?guided.practice:freeState;heard=false;preview=null;save();render();}
+ function changeMode(value){if(value===mode)return;successOpen=false;cancel();save();mode=value;state=mode==='guided'?guided.practice:freeState;heard=false;preview=null;save();render();}
+ function advance(){next();document.querySelector('.progression-stages')?.scrollIntoView?.({block:'start',behavior:'smooth'});}
+ function dismissSuccess(){successOpen=false;render();document.getElementById('progression-answer')?.focus({preventScroll:true});}
  async function listen(kind='full',value=null){
  cancel();busy=true;const request=token,r=state.current;
  const plan=kind==='key'?[{midi:value,offset:0,level:.75}]:kind==='bass'?bassPlan(r.q,true):kind==='bass-answer'?bassAnswerPlan(r.answer):kind==='chord'?progressionPlan(r.q,null,value):kind==='answer'?progressionPlan(r.q,r.qualities):progressionPlan(r.q);
@@ -52,17 +54,19 @@ export function createProgressionScreen({app,storage,navigation,bindNavigation})
  <div class="progression-quality" role="group" aria-label="סוג אקורד ${i+1}">${[['major','מז׳ור',CHORDS[1].symbol],['minor','מינור',CHORDS[2].symbol]].map(([value,label,english])=>`<button data-progression-quality="${i}:${value}" aria-pressed="${r.qualities[i]===value}" ${r.completed?'disabled':''}>${label}<small class="interval-english" lang="en" dir="ltr">${english}</small></button>`).join('')}</div>${r.qualityResult?`<p>${r.qualityResult.matches[i]?'✓ נכון':'× נסו שוב'}</p>`:''}</section>`).join('')}</div>
  <div class="bass-answer-actions">${button('answer','▶ השמע את המהלך שלי','bass-secondary',!chosen)}${button('check-quality','בדוק תשובה','next',!chosen||r.completed)}</div><div class="bass-feedback" role="status">${r.qualityResult?`זיהיתם ${r.qualityResult.count} מתוך 4 אקורדים${r.completed?'.':'. אפשר לתקן ולנסות שוב.'}`:''}</div>
  ${r.completed?`<section class="bass-solution progression-success"><h3>זה המהלך שהוצאתם</h3><ol>${bassChords(r.q).map((c,i)=>`<li><strong lang="en" dir="ltr">${rootNames[i].english}${c.quality==='minor'?'m':''}</strong><span>${rootNames[i].hebrew} ${c.quality==='major'?'מז׳ור':'מינור'}</span><small lang="en" dir="ltr">${c.quality==='major'?CHORDS[1].symbol:CHORDS[2].symbol}</small></li>`).join('')}</ol>${button('success-play','▶ השמע את המהלך','bass-secondary')}${!courseComplete?button('new',mode==='guided'?'המהלך הבא →':'מהלך חדש →','next'):''}</section>`:''}`}
- </section><section class="stats bass-stats" aria-label="ההצלחה שלכם בתרגיל"><div><strong>${state.stats.completed}</strong><span>מהלכים שהוצאתם במלואם</span></div><div><strong>${state.stats.bassFirst}</strong><span>בס נכון בהגשה הראשונה</span></div><div><strong>${state.stats.qualityFirst}</strong><span>סוגי אקורדים נכונים בהגשה הראשונה</span></div></section><p class="save-note">◈ המקום והתשובות נשמרים בדפדפן, בנפרד מתרגיל הבס</p>${notice?`<p class="notice" role="alert">${notice}</p>`:''}</main><p class="piano-credit">פסנתר: Salamander Grand Piano V3 · Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a></p>`;
+ </section><section class="stats bass-stats" aria-label="ההצלחה שלכם בתרגיל"><div><strong>${state.stats.completed}</strong><span>מהלכים שהוצאתם במלואם</span></div><div><strong>${state.stats.bassFirst}</strong><span>בס נכון בהגשה הראשונה</span></div><div><strong>${state.stats.qualityFirst}</strong><span>סוגי אקורדים נכונים בהגשה הראשונה</span></div></section><p class="save-note">◈ המקום והתשובות נשמרים בדפדפן, בנפרד מתרגיל הבס</p>${notice?`<p class="notice" role="alert">${notice}</p>`:''}</main><p class="piano-credit">פסנתר: Salamander Grand Piano V3 · Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a></p>${successOpen&&r.completed?`<dialog id="progression-success-dialog" class="progression-success-dialog" aria-labelledby="progression-popup-title" aria-describedby="progression-popup-description"><span class="progression-success-icon" aria-hidden="true">✓</span><h2 id="progression-popup-title">${courseComplete?'כל הכבוד! השלמתם את המסלול':'כל הכבוד! הוצאתם את המהלך נכון'}</h2><p id="progression-popup-description">${courseComplete?'פתרתם את כל עשרת המהלכים. אפשר להמשיך לתרגול חופשי.':mode==='guided'?`פתרתם ${guided.completed} מתוך ${PROGRESSION_GOAL} מהלכים. מוכנים למהלך הבא?`:'זיהיתם נכון את הבס ואת כל ארבעת האקורדים.'}</p>${button('popup-next',courseComplete?'ממשיכים לתרגול חופשי':mode==='guided'?'המהלך הבא →':'מהלך חדש →','next')}${button('popup-stay','להישאר ולהאזין למהלך','quiet')}</dialog>`:''}`;
  const keyboard=document.querySelector('.bass-keyboard-scroll');if(keyboard)keyboard.scrollLeft=scroll;
  bindNavigation();on('guided',()=>changeMode('guided'));on('free',()=>changeMode('free'));on('continue-free',()=>changeMode('free'));on('full',()=>listen());on('bass',()=>listen('bass'));on('stop',()=>{cancel();render();});
- on('bass-answer',()=>{if(filled&&bassStage)listen('bass-answer');});on('answer',()=>{if(chosen&&!bassStage)listen('answer');});on('success-play',()=>listen());on('new',()=>{if(r.completed)next();});
+ on('bass-answer',()=>{if(filled&&bassStage)listen('bass-answer');});on('answer',()=>{if(chosen&&!bassStage)listen('answer');});on('success-play',()=>listen());on('new',()=>{if(r.completed)advance();});
  on('check-bass',()=>{if(!bassStage||!heard||!filled)return;state=submitProgressionBass(state);preview=null;save();render();});
- on('check-quality',()=>{if(bassStage||!chosen||r.completed)return;state=submitProgressionQualities(state);if(mode==='guided'&&state.current.completed)guided.completed=Math.max(guided.completed,guided.index+1);save();render();});
+ on('check-quality',()=>{if(bassStage||!chosen||r.completed)return;state=submitProgressionQualities(state);successOpen=state.current.completed;if(mode==='guided'&&state.current.completed)guided.completed=Math.max(guided.completed,guided.index+1);save();render();});
  document.querySelectorAll('[data-progression-slot]').forEach(b=>b.onclick=()=>{if(!bassStage)return;r.active=Number(b.dataset.progressionSlot);preview=null;save();render();});
  document.querySelectorAll('[data-progression-key]').forEach(b=>b.onclick=()=>{preview=Number(b.dataset.progressionKey);listen('key',preview);});
  on('insert',()=>{if(!bassStage||preview===null)return;r.answer[r.active]=preview;r.active=Math.min(3,r.active+1);r.result=null;preview=null;save();render();});
  document.querySelectorAll('[data-progression-quality]').forEach(b=>b.onclick=()=>{if(bassStage||r.completed)return;const [index,value]=b.dataset.progressionQuality.split(':');r.qualities[Number(index)]=value;r.qualityResult=null;save();render();});
  if(!bassStage)for(let i=0;i<4;i++)on('chord-'+i,()=>listen('chord',i));
+ on('popup-next',()=>{if(courseComplete)changeMode('free');else advance();});on('popup-stay',dismissSuccess);
+ const dialog=document.getElementById('progression-success-dialog');if(dialog){dialog.addEventListener('cancel',event=>{event.preventDefault();dismissSuccess();});dialog.showModal();document.getElementById('progression-popup-next')?.focus();}
  }
- return {show(){visible=true;render();},hide(){visible=false;cancel();}};
+ return {show(){visible=true;render();},hide(){visible=false;successOpen=false;cancel();}};
 }

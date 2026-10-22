@@ -65,8 +65,17 @@ test('guided progression counts ten complete two-stage rounds, persists through 
  const saved={[PROGRESSION_KEY]:w.localStorage.getItem(PROGRESSION_KEY),[PROGRESSION_GUIDED_KEY]:w.localStorage.getItem(PROGRESSION_GUIDED_KEY),[PROGRESSION_MODE_KEY]:'guided'};await w.happyDOM.close();w=setup(saved,false,true);d=w.document;assert.equal(course(w).completed,5);assert.ok(d.querySelector('.progression-success'));
  click(w,'free');assert.equal(d.querySelector('[role="progressbar"]'),null);assert.equal(stored(w).stats.completed,2);const guidedSaved=w.localStorage.getItem(PROGRESSION_GUIDED_KEY);click(w,'full');await flush();const chord=bassChords(stored(w).current.q);await enter(w,chord.map(c=>c.bass));click(w,'check-bass');choose(w,chord.map(c=>c.quality));click(w,'check-quality');assert.equal(stored(w).stats.completed,3);assert.equal(w.localStorage.getItem(PROGRESSION_GUIDED_KEY),guidedSaved);click(w,'guided');assert.equal(course(w).completed,5);
  }
- if(i<9)click(w,'new');
+ if(i<9){if(i===4)click(w,'new');else{assert.ok(d.querySelector('#progression-success-dialog').open);click(w,'popup-next');}}
  }
  assert.ok(d.querySelector('.bass-course-success'));assert.equal(d.querySelector('#progression-new'),null);assert.equal(course(w).practice.stats.bassFirst,9);assert.equal(course(w).practice.stats.qualityFirst,9);assert.equal(course(w).practice.stats.assisted,10);assert.equal(stored(w).stats.completed,3);
- click(w,'continue-free');assert.equal(d.querySelector('#progression-free').className,'selected');click(w,'guided');assert.ok(d.querySelector('.bass-course-success'));await w.happyDOM.close();
+ assert.match(d.querySelector('#progression-popup-title').textContent,/השלמתם/);click(w,'popup-next');assert.equal(d.querySelector('#progression-free').className,'selected');click(w,'guided');assert.ok(d.querySelector('.bass-course-success'));await w.happyDOM.close();
+});
+
+test('success popup offers next immediately, can be dismissed for listening, and never opens after a wrong answer',async()=>{
+ let s=initialProgression();s.current=newProgressionRound({patternIndex:0,key:0});s.current.answer=bassChords(s.current.q).map(c=>c.bass);s=submitProgressionBass(s);
+ const w=setup({[PROGRESSION_KEY]:JSON.stringify(s)}),d=w.document;
+ choose(w,['minor','major','minor','major']);click(w,'check-quality');assert.equal(d.querySelector('#progression-success-dialog'),null);
+ choose(w,['major','major','minor','major']);click(w,'check-quality');assert.ok(d.querySelector('#progression-success-dialog').open);assert.equal(d.activeElement.id,'progression-popup-next');assert.match(d.querySelector('#progression-popup-next').textContent,/מהלך חדש/);
+ click(w,'popup-stay');assert.equal(d.querySelector('#progression-success-dialog'),null);assert.equal(stored(w).stats.completed,1);click(w,'answer');await flush();assert.equal(d.querySelector('#progression-success-dialog'),null);
+ click(w,'new');click(w,'full');await flush();const chords=bassChords(stored(w).current.q);await enter(w,chords.map(c=>c.bass));click(w,'check-bass');choose(w,chords.map(c=>c.quality));click(w,'check-quality');assert.ok(d.querySelector('#progression-success-dialog').open);click(w,'popup-next');assert.equal(stored(w).current.stage,'bass');assert.equal(stored(w).stats.completed,2);assert.equal(d.querySelector('#progression-success-dialog'),null);await w.happyDOM.close();
 });
