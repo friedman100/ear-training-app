@@ -10,8 +10,8 @@ export function timelinePhase(elapsed,withSinging=true,{slotMs=SLOT_MS,demoMs=DE
  return {phase:'sing',step:Math.floor(singing/slotMs),position:singing/(noteCount*slotMs)};
 }
 export const REQUIRED_ACCURATE_MS=600;
-export function createTimedRound(notes,{requiredMs=REQUIRED_ACCURATE_MS,...timing}={}){
- const results=notes.map(()=>({accurate:false,readings:0,goodMs:0}));let step=-1,lastTime=null,lastGood=false;const tracker=createTracker();
+export function createTimedRound(notes,{requiredMs=REQUIRED_ACCURATE_MS,tolerance=25,...timing}={}){
+ const results=notes.map(()=>({accurate:false,readings:0,goodMs:0}));let step=-1,lastTime=null,lastGood=false;const tracker=createTracker({tolerance});
  return {results,update(detection,time){
  const phase=timelinePhase(time,true,{...timing,noteCount:notes.length});
  if(phase.phase!=='sing')return {phase,result:null};
@@ -19,7 +19,7 @@ export function createTimedRound(notes,{requiredMs=REQUIRED_ACCURATE_MS,...timin
  const result=tracker.update(detection,notes[step],time);
  if(result.reliable)results[step].readings++;
  // Match the green dots exactly; brief deviations pause rather than erase credit.
- const good=result.reliable&&Math.abs(centsFromTarget(detection.frequency,notes[step]))<=25;
+ const good=result.reliable&&Math.abs(centsFromTarget(detection.frequency,notes[step]))<=tolerance;
  if(good&&lastGood&&lastTime!==null&&time-lastTime<=100)results[step].goodMs+=Math.max(0,time-lastTime);
  lastTime=time;lastGood=good;
  results[step].accurate=results[step].goodMs>=requiredMs;

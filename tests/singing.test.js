@@ -373,3 +373,23 @@ test('guided warmup success clearly announces the new pattern and places a prima
  const panel=d.querySelector('#warmup-success'),next=d.querySelector('#next-warmup-pattern');assert.equal(panel.hidden,false);assert.ok(panel.classList.contains('celebrate'));assert.equal(panel.getAttribute('aria-live'),'polite');assert.match(d.querySelector('#warmup-success-title').textContent,/כל הכבוד/);assert.match(d.querySelector('#warmup-success-detail').textContent,/אפשר לעבור לרמה הבאה/);assert.equal(next.parentElement,panel);assert.ok(next.classList.contains('primary'));assert.equal(next.disabled,false);
  assert.equal(d.querySelector('[data-warmup-step="0"]').getAttribute('aria-current'),'step');assert.equal(d.querySelector('[data-warmup-step="1"]').textContent.includes('נעול'),false);next.click();assert.equal(panel.hidden,true);assert.equal(d.querySelector('[data-warmup-step="1"]').getAttribute('aria-current'),'step');await s.w.happyDOM.close();
 });
+
+test('40-cent scale tolerance accepts both signs and octaves without relaxing other timed exercises',()=>{
+ const notes=[48,50,52,53,55,53,52,50,48],base={slotMs:1800,demoMs:0,countMs:0,requiredMs:400};
+ for(const cents of [-41,-39,-35,35,39,41])for(const octave of [0,12]){
+ const relaxed=createTimedRound(notes,{...base,tolerance:40}),standard=createTimedRound(notes,base);
+ for(let t=0;t<1600;t+=50){const signal=detected(440*2**((notes[0]+octave-69)/12)*2**(cents/1200));relaxed.update(signal,t);standard.update(signal,t);}
+ assert.equal(relaxed.results[0].accurate,Math.abs(cents)<40);assert.equal(standard.results[0].accurate,false);
+ }
+ assert.equal(WARMUP_PATTERNS[2].tolerance,40);assert.ok(WARMUP_PATTERNS.filter((_,i)=>i!==2).every(p=>(p.tolerance??25)===25));
+});
+test('scale chart, green dots and success share 40 cents, and switching patterns restores 25 cents',async()=>{
+ const s=await setup({production:true}),d=s.w.document;
+ d.querySelector('[data-singing-mode="free"]').click();d.querySelector('[data-exercise="warmup"]').click();d.querySelector('[data-warmup-step="2"]').click();
+ const band=Number(d.querySelector('#warmup-target0').getAttribute('height'));assert.ok(Math.abs(band-80*75/700)<1e-8);assert.match(d.querySelector('#warmup-hint').textContent,/±40/);
+ d.querySelector('#warmup-mic').click();await flush();d.querySelector('#warmup-retry').click();await flush();
+ const notes=[48,50,52,53,55,53,52,50,48],start=1850;
+ for(let t=start;t<start+notes.length*1800;t+=50){const midi=notes[Math.floor((t-start)/1800)];s.setSignal(tone(440*2**((midi-69)/12)*2**(35/1200)));s.tick(t);}
+ s.tick(start+notes.length*1800+50);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.ok([...d.querySelectorAll('#warmup-trace circle')].every(dot=>dot.getAttribute('fill')==='#3f8c43'));
+ d.querySelector('[data-warmup-step="0"]').click();assert.match(d.querySelector('#warmup-hint').textContent,/±25/);assert.ok(Math.abs(Number(d.querySelector('#warmup-target0').getAttribute('height'))-50*75/400)<1e-8);await s.w.happyDOM.close();
+});
