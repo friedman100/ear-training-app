@@ -21,6 +21,10 @@ export function playBassSequence(plan,onPlaybackChange=()=>{},onBeat=()=>{}){
 export function playSongSequence(plan,spacing,onPlaybackChange=()=>{}){
  return playPlan(plan,onPlaybackChange,()=>{},1,{duration:Math.max(.4,spacing-.3),release:.35});
 }
+export function playReferenceSequence(plan,onPlaybackChange=()=>{}){
+ if(!plan.length)throw Error('Empty reference');
+ return playPlan(plan,onPlaybackChange,()=>{},.8);
+}
 async function playPlan(plan,onPlaybackChange,onReady,level,{duration=NOTE_DURATION,release=RELEASE_TAIL,onBeat}={}){
  stop();const request=generation;
  context??=new AudioContext();
@@ -36,25 +40,27 @@ async function playPlan(plan,onPlaybackChange,onReady,level,{duration=NOTE_DURAT
  }));
  if(request!==generation)return;
  const time=context.currentTime+.03;
+ const endOffset=Math.max(...plan.map(n=>n.offset+(n.duration??duration)+(n.release??release)));
+ const lastEnding=plan.findLastIndex(n=>n.offset+(n.duration??duration)+(n.release??release)===endOffset);
  plan.forEach(({midi,offset},i)=>{
  const source=context.createBufferSource(),gain=context.createGain(),t=time+offset;
  source.buffer=buffers.get(sampleMidi(midi));
  if(midi<48)source.playbackRate.value=.5;
- const noteLevel=plan[i].level??level;
+ const noteLevel=plan[i].level??level,noteDuration=plan[i].duration??duration,noteRelease=plan[i].release??release;
  source.connect(gain);gain.connect(context.destination);
  // Preserve the recorded piano's natural decay; soften its attack and release.
  gain.gain.setValueAtTime(0,t);
  gain.gain.linearRampToValueAtTime(noteLevel,t+.015);
- gain.gain.setValueAtTime(noteLevel,t+duration-.3);
+ gain.gain.setValueAtTime(noteLevel,t+Math.max(.02,noteDuration-.3));
  // Exponential release falls to -80 dB before the final silent stop.
- gain.gain.exponentialRampToValueAtTime(.35*noteLevel,t+duration);
- gain.gain.exponentialRampToValueAtTime(.0001*noteLevel,t+duration+release-.02);
- gain.gain.linearRampToValueAtTime(0,t+duration+release);
- if(i===plan.length-1)source.onended=()=>{if(request===generation)onPlaybackChange(false);};
- source.start(t);source.stop(t+duration+release);sources.push(source);
+ gain.gain.exponentialRampToValueAtTime(.35*noteLevel,t+noteDuration);
+ gain.gain.exponentialRampToValueAtTime(.0001*noteLevel,t+noteDuration+noteRelease-.02);
+ gain.gain.linearRampToValueAtTime(0,t+noteDuration+noteRelease);
+ if(i===lastEnding)source.onended=()=>{if(request===generation)onPlaybackChange(false);};
+ source.start(t);source.stop(t+noteDuration+noteRelease);sources.push(source);
  });
  if(onBeat)[...new Set(plan.map(note=>note.offset))].forEach((offset,i)=>setTimeout(()=>{if(request===generation)onBeat(i);},Math.round((.03+offset)*1000)));
  setTimeout(()=>{if(request===generation)onPlaybackChange(true);},30);
  setTimeout(()=>{if(request===generation)onReady();},Math.round((.03+(plan[1]?.offset??0))*1000));
- await new Promise(resolve=>setTimeout(resolve,Math.round((plan.at(-1).offset+duration+release+.05)*1000)));
+ await new Promise(resolve=>setTimeout(resolve,Math.round((endOffset+.05)*1000)));
 }

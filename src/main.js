@@ -6,10 +6,25 @@ import {PLAYBACK_TYPES} from './playback-plan.js';
 import './style.css';
 import {RANGES,ENGLISH_INTERVALS,INTERVALS,STAGES,windowSize,initialState,question,answer,record,load} from './logic.js';
 import {SESSION_KEY,newSession,completeQuestion,noteUnlocks,loadSession,restoreQuestion} from './session.js';
-import {play,stop} from './audio.js';
+import {play,stop,playReferenceSequence} from './audio.js';
+import {INTERVAL_REFERENCES,referencesFor,referencePlan} from './interval-references.js';
+import {renderReferences} from './reference-view.js';
 let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw new Error('Storage unavailable');}};}
 let state=load(storage),q,heard=false,busy=false,playing=false,wrong=[],notice='',settings=false,token=0;
 let session=loadSession(storage);
+const REFERENCE_INTRO_KEY='ear-training-reference-intro-v1';
+let referenceOpen=false,referencePlaying=null,referenceError='',referenceLibraryOpen=false,introDone=false;
+try{introDone=storage.getItem(REFERENCE_INTRO_KEY)==='done';}catch{}
+function closeReferences(){stopReference();referenceOpen=false;render();document.getElementById('my-references')?.focus({preventScroll:true});}
+function stopReference(){token++;stop();busy=false;playing=false;referencePlaying=null;}
+async function auditionReference(id,kind){
+ const ref=INTERVAL_REFERENCES.find(ref=>ref.id===id);if(!ref||ref.verification.status!=='verified')return;
+ stopReference();const request=token;referencePlaying=id+':'+kind;referenceError='';render();
+ try{await playReferenceSequence(referencePlan(ref,kind));}catch{if(request===token)referenceError='לא הצלחנו להשמיע את הרפרנס. נסו שוב.';}
+ finally{if(request===token){referencePlaying=null;render();}}
+}
+async function auditionReferenceInterval(a,b){stopReference();const request=token;referencePlaying='intro';render();try{await play(a,b);}catch{if(request===token)referenceError='לא הצלחנו להשמיע. נסו שוב.';}finally{if(request===token){referencePlaying=null;render();}}}
+const referenceMarkup=intervals=>renderReferences({intervals,playing:referencePlaying,error:referenceError});
 const app=document.querySelector('#app');
 let section=location.protocol==='file:'?'intervals':'singing';
 const pathNavigation=()=>`<nav class="path-navigation" aria-label="בחירת מסלול"><button data-section="singing" aria-pressed="${section==='singing'}">1. לשמוע ולשיר</button><button data-section="intervals" aria-pressed="${section==='intervals'}">2. לשיר ולזהות מרווחים</button><button data-section="chords" aria-pressed="${section==='chords'}">3. זיהוי אקורדים</button><button data-section="bass" aria-pressed="${section==='bass'}">4. הוצאת בס משמיעה</button><button data-section="progression" aria-pressed="${section==='progression'}">5. הוצאת מהלך אקורדים משמיעה</button><button data-section="songs" aria-pressed="${section==='songs'}">6. הוצאת שירים משמיעה</button></nav>`;
@@ -17,7 +32,7 @@ function bindPathNavigation(){document.querySelectorAll('[data-section]').forEac
  if(button.dataset.section===section)return;
  const frame=document.getElementById('singing-frame');
  try{if(frame?.contentWindow)frame.contentWindow.dispatchEvent(new Event('singing-stop'));}catch{}
- songs.hide();progression.hide();bass.hide();chords.hide();token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
+ songs.hide();progression.hide();bass.hide();chords.hide();referenceOpen=false;referencePlaying=null;token++;stop();busy=false;playing=false;settings=false;section=button.dataset.section;render();
 });}
 const chords=createChordScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 const bass=createBassScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
@@ -35,8 +50,8 @@ window.addEventListener('message',event=>{
 const active=()=>state.mode==='guided'?STAGES[state.stage]:state.selected;
 function saveSession(){session.current={q,mode:state.mode,range:state.range,wrong};try{storage.setItem(SESSION_KEY,JSON.stringify(session));}catch{notice='לא ניתן לשמור את התרגול בדפדפן הזה.';}}
 function save(){saveSession();try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
-function next(){token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);saveSession();render();}
-async function listen(a=q.start,b=q.end){if(busy)return;busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},state.playbackType);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
+function next(){referenceOpen=false;referencePlaying=null;token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);saveSession();render();}
+async function listen(a=q.start,b=q.end){if(busy)return;if(referencePlaying)stopReference();busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},state.playbackType);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
  if(section==='songs'){songs.show();return;}
@@ -45,6 +60,10 @@ function render(){
  if(section==='chords'){chords.show();return;}
  if(section==='singing'){renderSinging();return;}
  if(session.ended){renderSummary();return;}
+ const library=document.getElementById('reference-library');if(library)referenceLibraryOpen=library.open;
+ const previousDialog=document.querySelector('dialog[open]'),dialogPosition=previousDialog?{id:previousDialog.id,top:previousDialog.scrollTop}:null;
+ const referenceFocus=document.activeElement?.dataset?.reference?{id:document.activeElement.dataset.reference,kind:document.activeElement.dataset.referenceKind}:null;
+ const initialIntro=!introDone&&state.mode==='guided'&&state.stage===0&&state.stats.guided.total===0&&!state.pending&&!settings;
  const stats=state.stats[state.mode], pct=stats.total?Math.round(100*stats.correct/stats.total):0;
  const n=windowSize(state.stage),target=Math.ceil(n*.8),correctCount=state.history.filter(h=>h.correct).length;
  const progressValue=Math.min(correctCount,target),stagePct=100*progressValue/target;
@@ -59,7 +78,7 @@ function render(){
  <div class="sound-art" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
  <h2>איזה מרווח מנוגן פה?</h2><p class="exercise-instruction">הקשיבו לשני הצלילים, שירו אותם ובחרו את התשובה</p>
  <div class="practice-actions">${button('listen',busy?(playing?'◌ &nbsp; משמיע…':'◌ &nbsp; מכין צלילים…'):heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','<span aria-hidden="true">→</span><span>המרווח הבא</span>','next'):''}</div>
- <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div>
+ <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div><button id="my-references" class="reference-help-button">♪ הרפרנסים שלי</button>
 
  <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></button>`).join('')}</div>
  <div class="feedback" role="status">${q.solved?'יפה מאוד! זיהיתם את המרווח.':wrong.length?'עוד ניסיון — הקשיבו שוב ונסו תשובה אחרת.':heard?'קחו את הזמן. האוזן לומדת בכל ניסיון.':'לחצו על האזנה כדי להתחיל.'}</div>
@@ -69,15 +88,24 @@ function render(){
  ${state.mode==='guided'?`<p>מתקדמים צעד־צעד, בונים ביטחון.</p><div class="steps">${STAGES.map((s,i)=>`<div class="step ${i===state.stage?'current':''} ${i<state.stage?'done':''}"><span class="step-number">${i<state.stage?'✓':i+1}</span><span>${i===0?'קוורטה וקווינטה זכות':INTERVALS[s.at(-1)]}<small class="interval-english" lang="en" dir="ltr">${i===0?'Perfect 4th / Perfect 5th':ENGLISH_INTERVALS[s.at(-1)]}</small>${i===5?'<small>תחילת חלק ב׳</small>':''}</span><span class="step-status">${i===state.stage?'בתרגול':i>state.stage?'·':''}</span></div>`).join('')}</div>${state.partAComplete&&state.stage===4?button('partB','חלק א׳ הושלם! מעבר לחלק ב׳','next'):''}${state.complete?'<p class="success-text">כל המרווחים פתוחים. ממשיכים לתרגל!</p>':''}`:
  `<p>בחרו מרווח אחד או יותר. ההתקדמות במסלול המודרך נשמרת בנפרד.</p><div class="choices">${INTERVALS.slice(1).map((name,i)=>`<label><input type="checkbox" value="${i+1}" ${state.selected.includes(i+1)?'checked':''}><span>${name}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[i+1]}</small></span></label>`).join('')}</div>`}</section></aside></div>
  <section class="stats" aria-label="מדדי הצלחה"><div><span class="stat-icon">⚡</span><strong>${stats.streak}</strong><span>רצף הצלחות בניסיון הראשון</span></div><div><span class="stat-icon">◎</span><strong>${pct}<small>%</small></strong><span>הצלחה בניסיון הראשון</span></div><div><span class="stat-icon">♫</span><strong>${stats.total}</strong><span>שאלות שתרגלתם במצב הזה</span></div></section>
- <p class="save-note">◈ ההתקדמות נשמרת אוטומטית בדפדפן הזה</p>${notice?`<p role="alert" class="notice">${notice}</p>`:''}</main><footer>תזכרו - לשיר זה המפתח של שמיעה טובה<span>האקדמיה לגיטרה של אמיר פרידמן - המסלול להוצאת מוזיקה משמיעה</span></footer><p class="piano-credit">פסנתר: Salamander Grand Piano V3 · Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a></p>
+ <details id="reference-library" class="reference-library panel" ${referenceLibraryOpen?'open':''}><summary>♪ רפרנסים מוזיקליים</summary><p>ספריית מנגינות ללימוד ולחזרה, גם מחוץ לשאלה הפעילה.</p>${referenceMarkup()}</details><p class="save-note">◈ ההתקדמות נשמרת אוטומטית בדפדפן הזה</p>${notice?`<p role="alert" class="notice">${notice}</p>`:''}</main><footer>תזכרו - לשיר זה המפתח של שמיעה טובה<span>האקדמיה לגיטרה של אמיר פרידמן - המסלול להוצאת מוזיקה משמיעה</span></footer><p class="piano-credit">פסנתר: Salamander Grand Piano V3 · Alexander Holm · <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener noreferrer">CC BY 3.0</a></p>
  ${settings?`<dialog aria-labelledby="settings-title"><h2 id="settings-title">הגדרות צליל</h2><p>בחרו את המנעד הנוח לכם. שני הצלילים תמיד בתוכו.</p><div class="ranges">${[['low','נמוך','C3–C5'],['middle','אמצעי','C4–C6'],['high','גבוה','C5–C7']].map(([id,name,notes])=>`<button data-range="${id}" class="${state.range===id?'selected':''}">${name}<small dir="ltr">${notes}</small></button>`).join('')}</div>${button('close-settings','חזרה לתרגול','next')}</dialog>`:''}
- ${state.mode==='guided'&&state.pending?`<dialog aria-labelledby="unlock-title"><span class="eyebrow">כל הכבוד!</span><h2 id="unlock-title">${typeof state.pending==='number'?`מרווח חדש נפתח: ${INTERVALS[state.pending]}`:state.pending==='partB'?'השלמתם את חלק א׳!':'השלמתם את המסלול!'}</h2>${typeof state.pending==='number'?`<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[state.pending]}</small>`:''}<p>${typeof state.pending==='number'?'הקשיבו למרווח החדש לפני שממשיכים. הוא מצטרף לכל המרווחים שכבר למדתם.':state.pending==='partB'?'אפשר להמשיך לתרגל כאן, או להתקדם לחלק ב׳ ולהכיר את הטריטון.':'כל המרווחים עד אוקטבה פתוחים. התרגול ממשיך ללא הגבלה.'}</p>${typeof state.pending==='number'?button('demo',busy?'משמיע…':'▶ האזנה למרווח החדש','play'):''}${state.pending==='partB'?button('partB','אני מוכן/ה לחלק ב׳','next'):''}${button('continue',state.pending==='partB'?'להמשיך לתרגל בחלק א׳':'ממשיכים לתרגל','quiet')}</dialog>`:''}`;
+ ${state.mode==='guided'&&state.pending?`<dialog aria-labelledby="unlock-title"><span class="eyebrow">כל הכבוד!</span><h2 id="unlock-title">${typeof state.pending==='number'?`מרווח חדש נפתח: ${INTERVALS[state.pending]}`:state.pending==='partB'?'השלמתם את חלק א׳!':'השלמתם את המסלול!'}</h2>${typeof state.pending==='number'?`<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[state.pending]}</small>`:''}<p>${typeof state.pending==='number'?'הקשיבו למרווח החדש לפני שממשיכים. הוא מצטרף לכל המרווחים שכבר למדתם.':state.pending==='partB'?'אפשר להמשיך לתרגל כאן, או להתקדם לחלק ב׳ ולהכיר את הטריטון.':'כל המרווחים עד אוקטבה פתוחים. התרגול ממשיך ללא הגבלה.'}</p>${typeof state.pending==='number'?button('demo',busy?'משמיע…':'▶ האזנה למרווח החדש','play'):''}${typeof state.pending==='number'&&referencesFor(state.pending).length?`<section class="reference-introduction"><h3>הרפרנסים המוזיקליים של המרווח</h3>${referenceMarkup([state.pending])}</section>`:''}${state.pending==='partB'?button('partB','אני מוכן/ה לחלק ב׳','next'):''}${button('continue',state.pending==='partB'?'להמשיך לתרגל בחלק א׳':'ממשיכים לתרגל','quiet')}</dialog>`:''}
+ ${initialIntro?`<dialog id="reference-intro" class="reference-dialog" aria-labelledby="reference-intro-title"><h2 id="reference-intro-title">מתחילים בקוורטה וקווינטה זכות</h2><p>מכירים את הקפיצה דרך מנגינה מוכרת, שרים אותה ואז מתחילים לתרגל. אפשר לחזור לרפרנסים בכל זמן.</p><div class="reference-intro-intervals">${[5,7].map(id=>`<button data-intro-interval="${id}">♪ האזנה ל${INTERVALS[id]}</button>`).join('')}</div><h3>הרפרנסים המוזיקליים של המרווח</h3>${referenceMarkup([5,7])}${button('reference-intro-continue','ממשיכים לתרגל','next')}</dialog>`:''}
+ ${referenceOpen?`<dialog id="reference-drawer" class="reference-dialog" aria-labelledby="reference-drawer-title"><div class="reference-dialog-top"><h2 id="reference-drawer-title">הרפרנסים שלי</h2>${button('close-references','סגירה וחזרה לתרגול','quiet')}</div>${referenceMarkup()}</dialog>`:''}`;
  bind();
- const dialogs=document.querySelectorAll("dialog");const dialog=dialogs[dialogs.length-1];if(dialog){dialog.addEventListener("cancel",e=>e.preventDefault());dialog.showModal();}
+ const dialogs=document.querySelectorAll("dialog");const dialog=dialogs[dialogs.length-1];if(dialog){dialog.addEventListener("cancel",e=>{e.preventDefault();if(dialog.id==='reference-drawer')closeReferences();});dialog.classList.toggle('reference-dialog',!!dialog.querySelector('.reference-groups'));dialog.showModal();if(dialogPosition?.id===dialog.id)dialog.scrollTop=dialogPosition.top;}
+ if(referenceFocus){const scope=dialog??document.getElementById('reference-library');[...(scope?.querySelectorAll('[data-reference]')??[])].find(b=>b.dataset.reference===referenceFocus.id&&b.dataset.referenceKind===referenceFocus.kind)?.focus({preventScroll:true});}
 }
 function bind(){
  bindPathNavigation();
  const on=(id,fn)=>document.getElementById(id)?.addEventListener('click',fn);
+ on('my-references',()=>{stopReference();referenceOpen=true;referenceError='';render();});
+ on('close-references',closeReferences);
+ on('reference-intro-continue',()=>{stopReference();introDone=true;try{storage.setItem(REFERENCE_INTRO_KEY,'done');}catch{}render();});
+ document.querySelectorAll('[data-reference]').forEach(b=>b.onclick=()=>auditionReference(b.dataset.reference,b.dataset.referenceKind));
+ document.querySelectorAll('[data-stop-reference]').forEach(b=>b.onclick=()=>{stopReference();render();});
+ document.querySelectorAll('[data-intro-interval]').forEach(b=>b.onclick=()=>{stopReference();const start={low:48,middle:60,high:72}[state.range];auditionReferenceInterval(start,start+Number(b.dataset.introInterval));});
  on('end-session',()=>{token++;stop();busy=false;playing=false;settings=false;session.ended=true;saveSession();render();});
  on('listen',()=>listen());on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
  ['guided','free'].forEach(mode=>on(mode,()=>{state.mode=mode;save();next();}));
@@ -96,7 +124,7 @@ function bind(){
  state.selected=b.checked?[...state.selected,id]:state.selected.filter(n=>n!==id);save();next();
  });
  on('demo',()=>{const start={low:48,middle:60,high:72}[state.range];listen(start,start+state.pending);});
- on('continue',()=>{state.pending=null;save();render();});
+ on('continue',()=>{stopReference();state.pending=null;save();render();});
  on('partB',()=>{session=noteUnlocks(session,[6]);state.stage=5;state.history=[];state.pending=6;save();next();});
 }
 q=restoreQuestion(session.current,active(),state.range,state.mode,RANGES[state.range]);

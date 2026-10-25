@@ -1,0 +1,9 @@
+import {INTERVAL_REFERENCES,referencesFor} from './interval-references.js';
+import {INTERVALS,ENGLISH_INTERVALS} from './logic.js';
+const escape=text=>String(text).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+// This renderer never receives the active question or its correct answer.
+export function renderReferences({intervals=null,playing=null,error=''}={}){
+ const ids=intervals??[...new Set(INTERVAL_REFERENCES.map(ref=>ref.interval))].sort((a,b)=>a-b);
+ const groups=ids.filter(id=>referencesFor(id).length);if(!groups.length)return '';
+ return `<div class="reference-groups"><p class="reference-help">מנגינות למרווחים עולים: הקשיבו למנגינה, ואז לקפיצה מתוכה. אפשר להשוות בין רפרנסים ולחזור לשאלה.</p>${groups.map(id=>`<section class="reference-group" aria-label="${INTERVALS[id]}"><h3>${INTERVALS[id]} <small lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></h3>${referencesFor(id).map(ref=>{const ready=ref.verification.status==='verified';return `<article class="reference-card"><h4>${escape(ref.title)}</h4><p class="reference-interval">${INTERVALS[id]} עולה</p>${!ready?`<p class="reference-pending">ממתין לאימות — ${escape(ref.verification.reason)}</p>`:''}<div class="reference-actions"><button data-reference="${ref.id}" data-reference-kind="melody" class="reference-melody" ${!ready?'disabled':''}>${playing===ref.id+':melody'?'◌ משמיע רפרנס…':'▶ השמע רפרנס'}</button><button data-reference="${ref.id}" data-reference-kind="interval" ${!ready?'disabled':''}>${playing===ref.id+':interval'?'◌ משמיע מרווח…':'♪ השמע את המרווח'}</button></div></article>`;}).join('')}</section>`).join('')}${playing?'<button data-stop-reference class="bass-stop">■ עצור השמעה</button>':''}${error?`<p role="alert" class="notice">${escape(error)}</p>`:''}</div>`;
+}
