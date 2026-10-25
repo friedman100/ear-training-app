@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
+ 'vivaldi-spring':[[64,68,68,68,66,64,71,71,69,68,68,68,66,64,71,71,69,68,69,71,69,68,66,63,59,64],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.25,.25,.5,.5,.5,.5,.5,.5],[0,1]],
+ 'when-the-saints':[[60,64,65,67,60,64,65,67],[1,1,1,5,1,1,1,5],[0,1]],
+ 'pizmon-layakinton':[[65,69,72,69,67,65,62,65,67,67,69,65],[1,1,1,1,1,1,1,1,1,.5,.5,2],[0,1]],
  'bridal-chorus':[[65,70,70,70,65,72,69,70],[1,.75,.25,2,1,.75,.25,2],[0,1]],
  'we-wish':[[62,67,67,69,67,66,64,64],[1,1,.5,.5,.5,.5,1,1],[0,1]],
  'amazing-grace':[[62,67,71,67,71,69,67,64,62],[1,2,.5,.5,2,1,2,1,2],[0,1]],
@@ -11,7 +14,7 @@ const fixtures={
  'twinkle':[[60,60,67,67,69,69,67],[1,1,1,1,1,1,2],[1,2]]
 };
 test('approved source phrases retain pitches, rhythm, repeated notes and exact interval positions',()=>{
- assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,7);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.deepEqual(referencesFor(4),[]);
+ assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,10);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);
  for(const [id,[pitches,beats,indices]]of Object.entries(fixtures)){
  const ref=INTERVAL_REFERENCES.find(r=>r.id===id);assert.deepEqual(ref.melody.map(n=>n.midi),pitches);assert.deepEqual(ref.melody.map(n=>n.beats),beats);assert.deepEqual(ref.intervalNotes,indices);assert.ok(ref.verification.notes);assert.ok(ref.verification.sources.length);
  const plan=referencePlan(ref);let elapsed=0;plan.forEach((event,i)=>{assert.ok(Math.abs(event.offset-elapsed)<1e-9);assert.equal(event.midi,pitches[i]);assert.ok(Math.abs(event.duration-beats[i]*60/ref.bpm*(ref.melody[i].gate??.94))<1e-9);elapsed+=beats[i]*60/ref.bpm;});
