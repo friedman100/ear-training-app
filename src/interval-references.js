@@ -5,6 +5,12 @@ const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256=
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 const approvedShanaMelody=shanaApproved.notes.map((midi,i)=>{const seconds=i<shanaApproved.notes.length-1?shanaApproved.onsets[i+1]-shanaApproved.onsets[i]:1,beats=Number((seconds*2).toFixed(6));return {midi,beats,gate:shanaApproved.holds[i]/(beats/2),release:shanaApproved.releases[i]};});
 export const INTERVAL_REFERENCES=[
+ {id:'hatikvah',title:'התקווה',interval:2,bpm:88,
+  melody:melody([62,64,65,67,69,69,70,69,70,74,69],[.5,.5,.5,.5,1,1,.5,.5,.5,.5,2]).map((note,i)=>({...note,gate:1,release:i===10?.5:.25})),intervalNotes:[0,1],
+  verification:verified(['https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fanthem%2FHatikva_Dm%2F0000'],'שתי תיבות הפתיחה ברה מינור, לפי תעתיק ABC של John Chambers: DE FG A2 A2 | BA Bd A4, ביחידת שמינית. הפתיחה מתחילה בקו המלודי של השירה, D4–E4, ללא קדמה אינסטרומנטלית. המקצב נשמר בקצב הדגמה מתון 88; נגינה מחוברת ודעיכה רכה.')},
+ {id:'happy-birthday',title:'Happy Birthday',interval:2,bpm:120,
+  melody:melody([67,67,69,67,72,71,67,67,69,67,74,72],[.5,.5,1,1,1,2,.5,.5,1,1,1,2]).map((note,i)=>({...note,gate:1,release:i===11?.5:.25})),intervalNotes:[1,2],
+  verification:verified(['https://github.com/farvardin/kalimba.sh/blob/587b89925df8dab1ea1d1644fba5ff7636254537/samples/happybirthday.abc'],'שני משפטי הפתיחה בדו מז׳ור מתעתיק ABC: GG A2 G2 | c2 B4 | GG A2 G2 | d2 c4, יחידת שמינית ו־120 רבעים לדקה. שני צלילי G חוזרים בתחילה; הסקונדה הגדולה היא G–A, מהצליל השני לשלישי. החזרות והמקצב נשמרים, עם החזקה מלאה ודעיכה חופפת עדינה.')},
  {id:'smoke-on-the-water',title:'Smoke on the Water — Deep Purple',interval:3,bpm:112,
   melody:melody([67,70,72,null,67,null,70,73,72,67,70,72,70,67],[1,1,1,.5,.5,.5,1,.5,2,1,1,1.5,1,3.5]).map((note,i)=>({...note,gate:.94,release:i===13?.4:.12})),intervalNotes:[0,1],
   verification:verified(['https://exstrom.com/blog/abrazolica/posts/smoke.html'],'ריף הפתיחה, ארבע תיבות לפי קוד ה־ABC במקור (L:1/8), בקו העליון בלבד ובפסנתר: G–B♭–C, עם ההפסקות וה־D♭ במשפט השני. נשמר המקצב מה־ABC, כולל C בשלוש שמיניות בחזרה האחרונה. הגובה הועבר באוקטבה; קצב הדגמה 112. אין דגימה מההקלטה המקורית.')},

@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
+ 'hatikvah':[[62,64,65,67,69,69,70,69,70,74,69],[.5,.5,.5,.5,1,1,.5,.5,.5,.5,2],[0,1]],
+ 'happy-birthday':[[67,67,69,67,72,71,67,67,69,67,74,72],[.5,.5,1,1,1,2,.5,.5,1,1,1,2],[1,2]],
  'smoke-on-the-water':[[67,70,72,null,67,null,70,73,72,67,70,72,70,67],[1,1,1,.5,.5,.5,1,.5,2,1,1,1.5,1,3.5],[0,1]],
  'seven-nation-army':[[64,64,null,67,null,64,null,62,60,59],[1.5,.25,.25,.25,.5,.25,.5,.5,2,2],[1,3]],
  'oseh-shalom':[[62,65,69,69,69,69,69,69],[.5,.5,1.5,.5,1,.5,.5,4],[0,1]],
@@ -17,7 +19,7 @@ const fixtures={
  'twinkle':[[60,60,67,67,69,69,67],[1,1,1,1,1,1,2],[1,2]]
 };
 test('approved source phrases retain pitches, rhythm, repeated notes and exact interval positions',()=>{
- assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,13);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);assert.equal(referencesFor(3).length,3);
+ assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,15);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);assert.equal(referencesFor(3).length,3);assert.equal(referencesFor(2).length,2);
  for(const [id,[pitches,beats,indices]]of Object.entries(fixtures)){
  const ref=INTERVAL_REFERENCES.find(r=>r.id===id);assert.deepEqual(ref.melody.map(n=>n.midi),pitches);assert.deepEqual(ref.melody.map(n=>n.beats),beats);assert.deepEqual(ref.intervalNotes,indices);assert.ok(ref.verification.notes);assert.ok(ref.verification.sources.length);
  const plan=referencePlan(ref);let elapsed=0,eventIndex=0;ref.melody.forEach((note,i)=>{if(note.midi!==null){const event=plan[eventIndex++];assert.ok(Math.abs(event.offset-elapsed)<1e-9);assert.equal(event.midi,pitches[i]);assert.ok(Math.abs(event.duration-beats[i]*60/ref.bpm*(note.gate??.94))<1e-9);}elapsed+=beats[i]*60/ref.bpm;});assert.equal(plan.length,eventIndex);
