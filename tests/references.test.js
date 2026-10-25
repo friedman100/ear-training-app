@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
+ 'smoke-on-the-water':[[67,70,72,null,67,null,70,73,72,67,70,72,70,67],[1,1,1,.5,.5,.5,1,.5,2,1,1,1.5,1,3.5],[0,1]],
+ 'seven-nation-army':[[64,64,null,67,null,64,null,62,60,59],[1.5,.25,.25,.25,.5,.25,.5,.5,2,2],[1,3]],
+ 'oseh-shalom':[[62,65,69,69,69,69,69,69],[.5,.5,1.5,.5,1,.5,.5,4],[0,1]],
  'vivaldi-spring':[[64,68,68,68,66,64,71,71,69,68,68,68,66,64,71],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5],[0,1]],
  'when-the-saints':[[60,64,65,67,60,64,65,67],[1,1,1,5,1,1,1,5],[0,1]],
  'pizmon-layakinton':[[65,69,72,69,67,65,62,65,67,67,69,65],[1,1,1,1,1,1,1,1,1,.5,.5,2],[0,1]],
@@ -14,10 +17,10 @@ const fixtures={
  'twinkle':[[60,60,67,67,69,69,67],[1,1,1,1,1,1,2],[1,2]]
 };
 test('approved source phrases retain pitches, rhythm, repeated notes and exact interval positions',()=>{
- assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,10);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);
+ assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,13);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);assert.equal(referencesFor(3).length,3);
  for(const [id,[pitches,beats,indices]]of Object.entries(fixtures)){
  const ref=INTERVAL_REFERENCES.find(r=>r.id===id);assert.deepEqual(ref.melody.map(n=>n.midi),pitches);assert.deepEqual(ref.melody.map(n=>n.beats),beats);assert.deepEqual(ref.intervalNotes,indices);assert.ok(ref.verification.notes);assert.ok(ref.verification.sources.length);
- const plan=referencePlan(ref);let elapsed=0;plan.forEach((event,i)=>{assert.ok(Math.abs(event.offset-elapsed)<1e-9);assert.equal(event.midi,pitches[i]);assert.ok(Math.abs(event.duration-beats[i]*60/ref.bpm*(ref.melody[i].gate??.94))<1e-9);elapsed+=beats[i]*60/ref.bpm;});
+ const plan=referencePlan(ref);let elapsed=0,eventIndex=0;ref.melody.forEach((note,i)=>{if(note.midi!==null){const event=plan[eventIndex++];assert.ok(Math.abs(event.offset-elapsed)<1e-9);assert.equal(event.midi,pitches[i]);assert.ok(Math.abs(event.duration-beats[i]*60/ref.bpm*(note.gate??.94))<1e-9);}elapsed+=beats[i]*60/ref.bpm;});assert.equal(plan.length,eventIndex);
  const pair=referencePlan(ref,'interval');assert.deepEqual(pair.map(n=>n.midi),indices.map(i=>pitches[i]));assert.equal(pair[1].midi-pair[0].midi,ref.interval);assert.deepEqual(pair.map(n=>n.offset),[0,.85]);
  }
  const irisPlan=referencePlan(INTERVAL_REFERENCES.find(r=>r.id==='iris-chorus'));assert.ok(irisPlan.at(-1).duration>.6);assert.equal(irisPlan.at(-1).release,.65);assert.ok(irisPlan.slice(0,-1).every(n=>n.release===.12));
@@ -48,4 +51,12 @@ test('major third phrasing is shorter and slower for Spring and connected for th
   const ref=referencesFor(4).find(r=>r.id===id),plan=referencePlan(ref);assert.equal(ref.bpm,bpm);
   plan.slice(0,-1).forEach((n,i)=>{assert.ok(Math.abs(n.offset+n.duration-plan[i+1].offset)<1e-9);assert.equal(n.release,.32);assert.ok(n.offset+n.duration+n.release>plan[i+1].offset);});assert.equal(plan.at(-1).release,.5);
  }
+});
+
+test('minor thirds preserve riff rests, repeated openings and the tied Oseh Shalom ending',()=>{
+ const seven=referencesFor(3).find(r=>r.id==='seven-nation-army'),plan=referencePlan(seven);
+ assert.deepEqual(plan.map(n=>n.midi),[64,64,67,64,62,60,59]);assert.deepEqual(referencePlan(seven,'interval').map(n=>n.midi),[64,67]);
+ assert.deepEqual(plan.map(n=>Number((n.offset*seven.bpm/60).toFixed(3))),[0,1.5,2,2.75,3.5,4,6]);
+ const oseh=referencesFor(3).find(r=>r.id==='oseh-shalom');assert.equal(oseh.melody.at(-1).beats,4);assert.equal(referencePlan(oseh).length,8);
+ const smoke=referencesFor(3).find(r=>r.id==='smoke-on-the-water');assert.equal(smoke.melody.filter(n=>n.midi===null).length,2);assert.equal(smoke.melody.reduce((s,n)=>s+n.beats,0),16);
 });

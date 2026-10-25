@@ -5,6 +5,15 @@ const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256=
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 const approvedShanaMelody=shanaApproved.notes.map((midi,i)=>{const seconds=i<shanaApproved.notes.length-1?shanaApproved.onsets[i+1]-shanaApproved.onsets[i]:1,beats=Number((seconds*2).toFixed(6));return {midi,beats,gate:shanaApproved.holds[i]/(beats/2),release:shanaApproved.releases[i]};});
 export const INTERVAL_REFERENCES=[
+ {id:'smoke-on-the-water',title:'Smoke on the Water — Deep Purple',interval:3,bpm:112,
+  melody:melody([67,70,72,null,67,null,70,73,72,67,70,72,70,67],[1,1,1,.5,.5,.5,1,.5,2,1,1,1.5,1,3.5]).map((note,i)=>({...note,gate:.94,release:i===13?.4:.12})),intervalNotes:[0,1],
+  verification:verified(['https://exstrom.com/blog/abrazolica/posts/smoke.html'],'ריף הפתיחה, ארבע תיבות לפי קוד ה־ABC במקור (L:1/8), בקו העליון בלבד ובפסנתר: G–B♭–C, עם ההפסקות וה־D♭ במשפט השני. נשמר המקצב מה־ABC, כולל C בשלוש שמיניות בחזרה האחרונה. הגובה הועבר באוקטבה; קצב הדגמה 112. אין דגימה מההקלטה המקורית.')},
+ {id:'seven-nation-army',title:'Seven Nation Army — The White Stripes',interval:3,bpm:124,
+  melody:melody([64,64,null,67,null,64,null,62,60,59],[1.5,.25,.25,.25,.5,.25,.5,.5,2,2]).map((note,i)=>({...note,gate:1,release:i===9?.4:.08})),intervalNotes:[1,3],
+  verification:verified(['https://github.com/Luke100000/ImmersiveMelodies/blob/16c004872866048d11f6d0141ca878bf4fb5a09a/melodies/Seven%20Nation%20Army.abc','https://mrbhss.wordpress.com/2013/09/24/music-performance-task-seven-nation-army/'],'מחזור אחד של הריף: E–E–G–E–D–C–B. זמני התווים וההפסקות מתעתיק ABC (L:1/4) שהועבר מ־G♯ ל־E, עם הצלבת סדר הגבהים במקור ההוראה. ההפסקות הקצרות נשמרות; הטרצה היא מה־E השני ל־G, לא בין שני צלילי הפתיחה הזהים. קצב הדגמה 124.')},
+ {id:'oseh-shalom',title:'עושה שלום — נורית הירש',interval:3,bpm:110,
+  melody:melody([62,65,69,69,69,69,69,69],[.5,.5,1.5,.5,1,.5,.5,4]).map((note,i)=>({...note,gate:1,release:i===7?.5:.25})),intervalNotes:[0,1],
+  verification:verified(['https://github.com/syntithenai/abc2book/blob/db1681da9417cea25072527b9e75fbe7f28186a5/abcresources/jc/allklez/I5:OSEHSHALOM.abc','https://www.ganhalev.org/songs/oseh_shalom/'],'לחן נורית הירש, משפט הפתיחה בלבד לפי תעתיק John Chambers משנת 2006. K:Dm, L:1/8: קדמת D F ואז A3 A A2 AA ו־A4 קשור ל־A4. קשר ההחזקה הוא צליל A אחד באורך ארבע פעימות, בלי התקפה חוזרת. הקפיצה הראשונה D4–F4 היא טרצה קטנה. נגינה מחוברת בקצב הדגמה 110, ללא העתקת עיבוד המקהלה.')},
  {id:'vivaldi-spring',title:'אביב — ויוואלדי · Spring',interval:4,bpm:96,
   melody:melody([64,68,68,68,66,64,71,71,69,68,68,68,66,64,71],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5]).map((note,i)=>i===14?{...note,release:.35}:note),intervalNotes:[0,1],
   verification:verified(['https://www.mutopiaproject.org/ftp/VivaldiA/O8/spring/spring-lys/spring1a.ly'],'פתיחת הפרק הראשון, שני מוטיבי הפתיחה בלבד, מקדמת E עד B המוחזק השני, ללא משפט ההמשך. תעתיק LilyPond של Mutopia: E–G♯ בפתיחה, שמיניות ושש־עשריות ו־B ברבע מנוקד. קו הכינור הועבר באוקטבה למנעד פסנתר נוח; המקצב נשמר, בקצב הדגמה 96. המקור: A. Vivaldi, עימוד Mutopia, CC BY-SA 3.0.')},
