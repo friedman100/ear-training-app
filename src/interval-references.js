@@ -1,14 +1,14 @@
 // Only source-checked melodies can be played. Unresolved choices remain visible, without invented notes.
 const verified=(sources,notes)=>({status:'verified',basis:'score-checked',sources,notes});
-const fromRecording=(span,notes)=>({status:'verified',basis:'user-recording',sources:['user:amir-recording-2026-10-25'],recording:{sha256:'95e83be9a8bf0f0e9fdba2fb4b5e7f21792adf488ca3f21eb89d9ba4af63fe5a',span},notes});
+const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256='95e83be9a8bf0f0e9fdba2fb4b5e7f21792adf488ca3f21eb89d9ba4af63fe5a'}={})=>({status:'verified',basis:'user-recording',sources:[source],recording:{sha256,span},notes});
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 export const INTERVAL_REFERENCES=[
  {id:'bridal-chorus',title:'Here Comes the Bride — מארש החתונה',interval:5,bpm:84,
   melody:melody([65,70,70,70,65,72,69,70],[1,.75,.25,2,1,.75,.25,2]),intervalNotes:[0,1],
   verification:verified(['https://piano.org/songs/bridal-chorus/?bar=5','https://onlinepianokeyboard.com/songs/here-comes-the-bride'],'משפט המנגינה המזוהה, תיבות 5–8, בסי במול מז׳ור. משקל 2/4: רבע, שמינית מנוקדת ושש־עשרה, ואז חצי. נשמר המקצב המנוקד; קצב הדגמה מתון.')},
  {id:'shana-avra',title:'שנה עברה, שנה באה',interval:5,bpm:120,
-  melody:melody([57,62,57,62,61,66,62,66,62,66,67,69,67,66,67,66,64],[.5,1.5,.5,1.5,.5,1.5,.5,1,.5,.5,.5,1.5,.75,.75,.5,.5,.75]).map((note,i)=>({...note,gate:i===16?.94:i===3?.74:i===1?.78:.88,release:i===16?.28:.07})),intervalNotes:[2,3],
-  verification:fromRecording([10.05,16.85],'פתיחת המשפט לפי שירת אמיר, בסולם רה מז׳ור, בהעברה באוקטבה לפסנתר. צליל הקדמה הראשון לא יציב והוסדר לפי החזרה היציבה על אותו תא A–D בשניות 11.1–11.4; המרווח המבודד נלקח מהחזרה הזאת. לפי בקשת אמיר, המשפט הוארך עד המשך „אני כפיי ארימה” מההקלטה שלו; נשמרים משכי הצלילים וההפרדה בין חצאי המשפט, עם דעיכה רכה בסיום. הקישור להקלטה המקורית שנשלח בהמשך לא נפתח בסביבת הפיתוח ואינו בסיס האימות לתעתיק.')},
+  melody:melody([57,62,57,62,61,66,62,66,62,66,67,69,67,66,67,66,64],[.76,1.46,.64,1.56,.74,1.56,.54,1,.66,.52,.4,1.58,1,1.16,.36,.44,1.26]).map((note,i)=>({...note,gate:i===3?.68:i===7?.7:.94,release:i===16?.3:i===3||i===7?.06:.1})),intervalNotes:[2,3],
+  verification:fromRecording([.92,8.74],'המשפט המלא לפי ההקלטה החדשה והייעודית שאמיר שלח לאחר שדחה את הגרסה הקודמת. גובהי היעד הוסדרו בסולם רה מז׳ור והועלו באוקטבה לפסנתר, בלי להפוך גלישות ותנודות לתווים נוספים. זמני תחילת הצלילים ומשכיהם נמדדו מחדש; bpm=120 הוא יחידת ייצוג לתזמון החופשי, לא קביעת מטרונום לשיר המקורי. נשמרת הנשימה באמצע וההחזקה הארוכה בסוף. הקוורטה המבודדת היא החזרה היציבה A–D בצלילים 3–4.',{source:'user:amir-recording-2026-10-25-2',sha256:'d09552b78fef33aa890a6d51e64a7dedaf3780bcd09a7770d1af74a0ffc7df54'})},
  {id:'we-wish',title:'We Wish You a Merry Christmas',interval:5,bpm:120,
   melody:melody([62,67,67,69,67,66,64,64],[1,1,.5,.5,.5,.5,1,1]),intervalNotes:[0,1],
   verification:verified(['https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fmirror%2Fmindspring.com%2F~thornton.rose%2FWeWishYouAMerryChristmas%2F0001'],'פתיחת המשפט בסול מז׳ור, כולל קדמה D. תעתיק ABC, משקל 3/4 ויחידת רבע; נעצרים בסיום המשפט לפני הקדמה הבאה.')},
