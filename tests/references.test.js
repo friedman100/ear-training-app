@@ -19,7 +19,7 @@ test('approved source phrases retain pitches, rhythm, repeated notes and exact i
  }
  const irisPlan=referencePlan(INTERVAL_REFERENCES.find(r=>r.id==='iris-chorus'));assert.ok(irisPlan.at(-1).duration>.6);assert.equal(irisPlan.at(-1).release,.65);assert.ok(irisPlan.slice(0,-1).every(n=>n.release===.12));
  const royal=INTERVAL_REFERENCES.find(r=>r.id==='royal-fanfare');assert.equal(royal.verification.basis,'user-recording');
- const royalPlan=referencePlan(royal);assert.ok(royalPlan[0].offset+royalPlan[0].duration+royalPlan[0].release<royalPlan[1].offset);assert.ok(royal.melody[0].beats>royal.melody[1].beats);assert.deepEqual(royalPlan.map(n=>Number(n.offset.toFixed(3))),[0,.333,.5,.667]);
+ const royalPlan=referencePlan(royal);assert.deepEqual(royalPlan.map(n=>n.release),[.1,.1,.1,.35]);assert.ok(royalPlan[0].offset+royalPlan[0].duration+royalPlan[0].release<royalPlan[1].offset);assert.ok(royal.melody[0].beats>royal.melody[1].beats);assert.deepEqual(royalPlan.map(n=>Number(n.offset.toFixed(3))),[0,.333,.5,.667]);
 });
 test('pending melodies cannot be played and invalid musical data cannot be promoted',()=>{
  const pending={id:'future',title:'Future melody',interval:4,melody:[],intervalNotes:[],verification:{status:'pending',sources:[],reason:'Awaiting a source'}};assert.equal(validateReferences([pending]),true);assert.throws(()=>referencePlan(pending));
