@@ -22,8 +22,8 @@ export const INTERVAL_REFERENCES=[
   melody:melody([60,60,67,67,69,69,67],[1,1,1,1,1,1,2]),intervalNotes:[1,2],
   verification:verified(['https://en.wikipedia.org/wiki/Twinkle,_Twinkle,_Little_Star'],'משפט הפתיחה של Ah! vous dirai-je, maman בסולפג׳ דו מז׳ור, ברבעים וחצי מסיים. הקווינטה היא בין הצליל השני לשלישי, אחרי דו החוזר.')},
  {id:'iris-chorus',title:'Iris — Goo Goo Dolls · פזמון',interval:7,bpm:140,
-  melody:melody([62,62,69,69,69,69,67,66,62,64],[1,1,1,1,.5,1,.75,.75,.75,.5]),intervalNotes:[1,2],
-  verification:fromRecording([20.28,23.85],'משפט הפזמון המבוקש לפי שירת אמיר: 10 צלילים עם חזרות על D ועל A, הירידה G–F♯ והסיום D–E. קצב ההדגמה והפיסוק מההקלטה; הגובה הועבר באוקטבה והוסדר לתווים בסולם רה מז׳ור. הקווינטה היא בין הצליל השני לשלישי, לא מהבית ולא מהפתיחה האינסטרומנטלית.')}
+  melody:melody([62,62,69,69,69,69,67,66,62,64],[1,1,1,1,.5,1,.75,.75,.75,1.5]).map((note,i)=>i===9?{...note,release:.65}:note),intervalNotes:[1,2],
+  verification:fromRecording([20.28,23.85],'משפט הפזמון המבוקש לפי שירת אמיר: 10 צלילים עם חזרות על D ועל A, הירידה G–F♯ והסיום D–E. קצב ההדגמה והפיסוק מההקלטה; הגובה הועבר באוקטבה והוסדר לתווים בסולם רה מז׳ור. הקווינטה היא בין הצליל השני לשלישי, לא מהבית ולא מהפתיחה האינסטרומנטלית. לפי בקשת אמיר, צליל הסיום מוחזק מעט יותר ודועך במשך 0.65 שניות.')}
 
 ];
 export const referencesFor=interval=>INTERVAL_REFERENCES.filter(ref=>ref.interval===interval);

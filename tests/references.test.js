@@ -7,7 +7,7 @@ const fixtures={
  'amazing-grace':[[62,67,71,67,71,69,67,64,62],[1,2,.5,.5,2,1,2,1,2],[0,1]],
  'royal-fanfare':[[60,60,60,67],[1,.5,.5,3],[2,3]],
  'shana-avra':[[57,62,57,62,61,66,62,66],[.5,1.5,.5,1.5,.5,1.5,.5,1],[2,3]],
- 'iris-chorus':[[62,62,69,69,69,69,67,66,62,64],[1,1,1,1,.5,1,.75,.75,.75,.5],[1,2]],
+ 'iris-chorus':[[62,62,69,69,69,69,67,66,62,64],[1,1,1,1,.5,1,.75,.75,.75,1.5],[1,2]],
  'twinkle':[[60,60,67,67,69,69,67],[1,1,1,1,1,1,2],[1,2]]
 };
 test('approved source phrases retain pitches, rhythm, repeated notes and exact interval positions',()=>{
@@ -17,6 +17,7 @@ test('approved source phrases retain pitches, rhythm, repeated notes and exact i
  const plan=referencePlan(ref);let elapsed=0;plan.forEach((event,i)=>{assert.ok(Math.abs(event.offset-elapsed)<1e-9);assert.equal(event.midi,pitches[i]);assert.ok(Math.abs(event.duration-beats[i]*60/ref.bpm*(ref.melody[i].gate??.94))<1e-9);elapsed+=beats[i]*60/ref.bpm;});
  const pair=referencePlan(ref,'interval');assert.deepEqual(pair.map(n=>n.midi),indices.map(i=>pitches[i]));assert.equal(pair[1].midi-pair[0].midi,ref.interval);assert.deepEqual(pair.map(n=>n.offset),[0,.85]);
  }
+ const irisPlan=referencePlan(INTERVAL_REFERENCES.find(r=>r.id==='iris-chorus'));assert.ok(irisPlan.at(-1).duration>.6);assert.equal(irisPlan.at(-1).release,.65);assert.ok(irisPlan.slice(0,-1).every(n=>n.release===.12));
  const royal=INTERVAL_REFERENCES.find(r=>r.id==='royal-fanfare');assert.equal(royal.verification.basis,'user-recording');
  const royalPlan=referencePlan(royal);assert.ok(royalPlan[0].offset+royalPlan[0].duration+royalPlan[0].release<royalPlan[1].offset);assert.ok(royal.melody[0].beats>royal.melody[1].beats);assert.deepEqual(royalPlan.map(n=>Number(n.offset.toFixed(3))),[0,.333,.5,.667]);
 });
