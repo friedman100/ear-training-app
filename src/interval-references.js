@@ -5,6 +5,12 @@ const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256=
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 const approvedShanaMelody=shanaApproved.notes.map((midi,i)=>{const seconds=i<shanaApproved.notes.length-1?shanaApproved.onsets[i+1]-shanaApproved.onsets[i]:1,beats=Number((seconds*2).toFixed(6));return {midi,beats,gate:shanaApproved.holds[i]/(beats/2),release:shanaApproved.releases[i]};});
 export const INTERVAL_REFERENCES=[
+ {id:'jaws',title:'מלתעות — Jaws',interval:1,bpm:100,
+  melody:melody([52,53,52,53,52,53,52,53],[.5,.5,.5,.5,.5,.5,.5,.5]).map((note,i)=>({...note,gate:.85,release:i===7?.35:.12})),intervalNotes:[0,1],
+  verification:verified(['https://en.wikipedia.org/wiki/Jaws_(soundtrack)','https://app.hoffmanacademy.com/lessons/piano/minor-2nds-major-2nds/video/?cp=0'],'מוטיב הכריש מאת John Williams: חילוף E–F, סקונדה קטנה עולה. הדגמה פדגוגית קצרה של ארבעה זוגות בפסנתר במנעד E3–F3, בשמיניות בקצב אחיד 100. אין טענה לשחזור ההאצה, התזמור או קצב קטע מסוים בפסקול; זוג המרווח זהה לצלילי המוטיב.')},
+ {id:'pink-panther',title:'הפנתר הוורוד — The Pink Panther',interval:1,bpm:120,
+  melody:melody([63,64,null,66,67,null,63,64,66,67,72,71],[.5,1.5,.5,.5,1.5,.5,.5,.75,.5,.75,.5,.75]).map((note,i)=>({...note,gate:1,release:i===11?.4:.2})),intervalNotes:[0,1],
+  verification:verified(['https://github.com/robsoncouto/arduino-songs/blob/master/pinkpanther/pinkpanther.ino'],'הנושא של Henry Mancini, מתחילת המנגינה D♯4–E4 דרך F♯4–G4 ועד C5–B4. גבהים, ערכים מנוקדים והפסקות לפי תעתיק התווים בקוד; הוסרו רק ההפסקות הארוכות שלפני הצליל הראשון. קצב 120; נגינה בפסנתר ודעיכה רכה במקום צליל הזמזם במקור. ההדגמה נעצרת אחרי המשפט הקצר, ללא כל מנגינת ההמשך. הערת הקרדיט השגויה בקוד המקור לא הועתקה.')},
  {id:'hatikvah',title:'התקווה',interval:2,bpm:88,
   melody:melody([62,64,65,67,69,69,70,69,70,74,69],[.5,.5,.5,.5,1,1,.5,.5,.5,.5,2]).map((note,i)=>({...note,gate:1,release:i===10?.5:.25})),intervalNotes:[0,1],
   verification:verified(['https://abcnotation.com/tunePage?a=trillian.mit.edu%2F~jc%2Fmusic%2Fabc%2Fanthem%2FHatikva_Dm%2F0000'],'שתי תיבות הפתיחה ברה מינור, לפי תעתיק ABC של John Chambers: DE FG A2 A2 | BA Bd A4, ביחידת שמינית. הפתיחה מתחילה בקו המלודי של השירה, D4–E4, ללא קדמה אינסטרומנטלית. המקצב נשמר בקצב הדגמה מתון 88; נגינה מחוברת ודעיכה רכה.')},
