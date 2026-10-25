@@ -5,15 +5,15 @@ const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256=
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 const approvedShanaMelody=shanaApproved.notes.map((midi,i)=>{const seconds=i<shanaApproved.notes.length-1?shanaApproved.onsets[i+1]-shanaApproved.onsets[i]:1,beats=Number((seconds*2).toFixed(6));return {midi,beats,gate:shanaApproved.holds[i]/(beats/2),release:shanaApproved.releases[i]};});
 export const INTERVAL_REFERENCES=[
- {id:'vivaldi-spring',title:'אביב — ויוואלדי · Spring',interval:4,bpm:112,
-  melody:melody([64,68,68,68,66,64,71,71,69,68,68,68,66,64,71,71,69,68,69,71,69,68,66,63,59,64],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.25,.25,.5,.5,.5,.5,.5,.5]).map((note,i)=>i===25?{...note,release:.35}:note),intervalNotes:[0,1],
-  verification:verified(['https://www.mutopiaproject.org/ftp/VivaldiA/O8/spring/spring-lys/spring1a.ly'],'פתיחת הפרק הראשון, קדמת E ושלוש התיבות הראשונות עד E של תחילת החזרה. תעתיק LilyPond של Mutopia: E–G♯ בפתיחה, שמיניות ושש־עשריות ו־B ברבע מנוקד. קו הכינור הועבר באוקטבה למנעד פסנתר נוח; המקצב נשמר, בקצב הדגמה 112. המקור: A. Vivaldi, עימוד Mutopia, CC BY-SA 3.0.')},
- {id:'when-the-saints',title:'When the Saints Go Marching In',interval:4,bpm:120,
-  melody:melody([60,64,65,67,60,64,65,67],[1,1,1,5,1,1,1,5]).map((note,i)=>i===7?{...note,release:.35}:note),intervalNotes:[0,1],
-  verification:verified(['https://de.wikibooks.org/wiki/Gitarre:_Notenlesen_-_F_G_und_Fis','https://www.thepianonotes.com/when-the-saints-go-marching-in-traditional-easy-letter-notes/'],'שני משפטי הפתיחה בדו מז׳ור. תעתיק ABC ב־Wikibooks: קדמה c e f ברבעים, g4 קשור ל־g ברבע לפני הקדמה הבאה. לכן ההחזקה היא חמש פעימות, ולא חמישה צלילי G נפרדים. הועבר באוקטבה למטה; משפט שני מסיים באותה החזקה.')},
+ {id:'vivaldi-spring',title:'אביב — ויוואלדי · Spring',interval:4,bpm:96,
+  melody:melody([64,68,68,68,66,64,71,71,69,68,68,68,66,64,71],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5]).map((note,i)=>i===14?{...note,release:.35}:note),intervalNotes:[0,1],
+  verification:verified(['https://www.mutopiaproject.org/ftp/VivaldiA/O8/spring/spring-lys/spring1a.ly'],'פתיחת הפרק הראשון, שני מוטיבי הפתיחה בלבד, מקדמת E עד B המוחזק השני, ללא משפט ההמשך. תעתיק LilyPond של Mutopia: E–G♯ בפתיחה, שמיניות ושש־עשריות ו־B ברבע מנוקד. קו הכינור הועבר באוקטבה למנעד פסנתר נוח; המקצב נשמר, בקצב הדגמה 96. המקור: A. Vivaldi, עימוד Mutopia, CC BY-SA 3.0.')},
+ {id:'when-the-saints',title:'When the Saints Go Marching In',interval:4,bpm:140,
+  melody:melody([60,64,65,67,60,64,65,67],[1,1,1,5,1,1,1,5]).map((note,i)=>({...note,gate:1,release:i===7?.5:.32})),intervalNotes:[0,1],
+  verification:verified(['https://de.wikibooks.org/wiki/Gitarre:_Notenlesen_-_F_G_und_Fis','https://www.thepianonotes.com/when-the-saints-go-marching-in-traditional-easy-letter-notes/'],'שני משפטי הפתיחה בדו מז׳ור. תעתיק ABC ב־Wikibooks: קדמה c e f ברבעים, g4 קשור ל־g ברבע לפני הקדמה הבאה. לכן ההחזקה היא חמש פעימות, ולא חמישה צלילי G נפרדים. הועבר באוקטבה למטה; משפט שני מסיים באותה החזקה. לפי בקשת אמיר, קצב ההדגמה 140, החזקה מלאה ודעיכה חופפת עדינה בין צלילים.')},
  {id:'pizmon-layakinton',title:'פזמון ליקינטון',interval:4,bpm:100,
-  melody:melody([65,69,72,69,67,65,62,65,67,67,69,65],[1,1,1,1,1,1,1,1,1,.5,.5,2]).map((note,i)=>i===11?{...note,release:.35}:note),intervalNotes:[0,1],
-  verification:verified(['https://github.com/rwmpelstilzchen/ukulele/blob/master/muzika%C4%B5oj/jakinton/jakinton.ly'],'לחן רבקה גוילי. שלוש תיבות הפתיחה לפי תעתיק LilyPond: פה–לה–דו–לה, סול–פה–רה–פה, סול–סול–לה–פה. משקל 4/4, רבעים, שתי שמיניות וחצי מסיים. הועבר למנעד F4–C5; הקפיצה הראשונה F4–A4 היא טרצה גדולה עולה. קצב הדגמה מתון 100.')},
+  melody:melody([65,69,72,69,67,65,62,65,67,67,69,65],[1,1,1,1,1,1,1,1,1,.5,.5,2]).map((note,i)=>({...note,gate:1,release:i===11?.5:.32})),intervalNotes:[0,1],
+  verification:verified(['https://github.com/rwmpelstilzchen/ukulele/blob/master/muzika%C4%B5oj/jakinton/jakinton.ly'],'לחן רבקה גוילי. שלוש תיבות הפתיחה לפי תעתיק LilyPond: פה–לה–דו–לה, סול–פה–רה–פה, סול–סול–לה–פה. משקל 4/4, רבעים, שתי שמיניות וחצי מסיים. הועבר למנעד F4–C5; הקפיצה הראשונה F4–A4 היא טרצה גדולה עולה. קצב הדגמה מתון 100. לפי בקשת אמיר, החזקה מלאה ודעיכה חופפת עדינה ללא שינוי בזמני תחילת הצלילים.')},
  {id:'bridal-chorus',title:'Here Comes the Bride — מארש החתונה',interval:5,bpm:84,
   melody:melody([65,70,70,70,65,72,69,70],[1,.75,.25,2,1,.75,.25,2]),intervalNotes:[0,1],
   verification:verified(['https://piano.org/songs/bridal-chorus/?bar=5','https://onlinepianokeyboard.com/songs/here-comes-the-bride'],'משפט המנגינה המזוהה, תיבות 5–8, בסי במול מז׳ור. משקל 2/4: רבע, שמינית מנוקדת ושש־עשרה, ואז חצי. נשמר המקצב המנוקד; קצב הדגמה מתון.')},

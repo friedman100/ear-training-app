@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
- 'vivaldi-spring':[[64,68,68,68,66,64,71,71,69,68,68,68,66,64,71,71,69,68,69,71,69,68,66,63,59,64],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.25,.25,.5,.5,.5,.5,.5,.5],[0,1]],
+ 'vivaldi-spring':[[64,68,68,68,66,64,71,71,69,68,68,68,66,64,71],[.5,.5,.5,.5,.25,.25,1.5,.25,.25,.5,.5,.5,.25,.25,1.5],[0,1]],
  'when-the-saints':[[60,64,65,67,60,64,65,67],[1,1,1,5,1,1,1,5],[0,1]],
  'pizmon-layakinton':[[65,69,72,69,67,65,62,65,67,67,69,65],[1,1,1,1,1,1,1,1,1,.5,.5,2],[0,1]],
  'bridal-chorus':[[65,70,70,70,65,72,69,70],[1,.75,.25,2,1,.75,.25,2],[0,1]],
@@ -40,4 +40,12 @@ test('production Shana Tova preserves the approved full piano preview exactly',(
  assert.deepEqual(plan.map(n=>Number(n.offset.toFixed(3))),approvedOnsets);assert.equal(ref.verification.recording.sha256,'0dc5a68799cbb10e8083719a16d0e5aafd5a57865e39a660a3f74c887fabc650');
  plan.forEach((n,i)=>{assert.ok(Math.abs(n.duration-approvedHolds[i])<1e-9,`note ${i+1} hold`);assert.equal(n.release,i===16?.35:.12);});
  assert.equal(plan[4].midi,62);assert.deepEqual(plan.slice(10,12).map(n=>n.midi),[69,69]);assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[57,62]);
+});
+
+test('major third phrasing is shorter and slower for Spring and connected for the songs',()=>{
+ const spring=referencesFor(4).find(r=>r.id==='vivaldi-spring');assert.equal(spring.bpm,96);assert.equal(spring.melody.length,15);assert.equal(spring.melody.at(-1).midi,71);
+ for(const [id,bpm] of [['when-the-saints',140],['pizmon-layakinton',100]]){
+  const ref=referencesFor(4).find(r=>r.id===id),plan=referencePlan(ref);assert.equal(ref.bpm,bpm);
+  plan.slice(0,-1).forEach((n,i)=>{assert.ok(Math.abs(n.offset+n.duration-plan[i+1].offset)<1e-9);assert.equal(n.release,.32);assert.ok(n.offset+n.duration+n.release>plan[i+1].offset);});assert.equal(plan.at(-1).release,.5);
+ }
 });
