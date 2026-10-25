@@ -1,6 +1,7 @@
 import {playbackPlan} from './playback-plan.js';
 export const NOTE_DURATION=.8;
 export const NOTE_GAP=.05;
+export const CHORD_DURATION=1.4;
 export const RELEASE_TAIL=1.4;
 export const PLAYBACK_DURATION_MS=Math.round((2*NOTE_DURATION+NOTE_GAP+RELEASE_TAIL+.05)*1000);
 let context;
@@ -13,7 +14,7 @@ export async function play(start,end,onPlaybackChange=()=>{},onSecondNote=()=>{}
 }
 export function chordPlan(notes,broken=false){return notes.map((midi,i)=>({midi,offset:broken?i*(NOTE_DURATION+NOTE_GAP):0}));}
 export function playChord(notes,broken=false,onPlaybackChange=()=>{},onReady=()=>{}){
- return playPlan(chordPlan(notes,broken),onPlaybackChange,onReady,broken?1:1/Math.sqrt(notes.length));
+ return playPlan(chordPlan(notes,broken),onPlaybackChange,onReady,broken?1:1/Math.sqrt(notes.length),{duration:broken?NOTE_DURATION:CHORD_DURATION});
 }
 export function playBassSequence(plan,onPlaybackChange=()=>{},onBeat=()=>{}){
  return playPlan(plan,onPlaybackChange,()=>{},1,{duration:1.3,release:.35,onBeat});

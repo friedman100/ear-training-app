@@ -221,7 +221,13 @@ test('four playback modes work in guided and free practice and survive reload wi
  d.querySelector('#playback-type').value=type;d.querySelector('#playback-type').dispatchEvent(new w.Event('change'));
  const before=w.playedNotes;d.querySelector('#listen').click();await flush();
  const count=type==='upDown'?4:2;assert.equal(w.playedNotes-before,count);
- if(type==='harmonic')assert.equal(w.audioSources.at(-1).startTime,w.audioSources.at(-2).startTime);
+ if(type==='harmonic'){
+ assert.equal(w.audioSources.at(-1).startTime,w.audioSources.at(-2).startTime);
+ const sessionBefore=w.localStorage.getItem('ear-training-session-v1'),stateBefore=w.localStorage.getItem('ear-training-v1'),pair=w.audioSources.slice(-2).map(n=>n.buffer);
+ d.querySelector('#listen-broken').click();await flush();const played=w.audioSources.slice(-2);
+ played.forEach((n,i)=>assert.equal(n.buffer,pair[i]));assert.ok(Math.abs(played[1].startTime-played[0].startTime-.85)<1e-9);
+ assert.equal(w.localStorage.getItem('ear-training-session-v1'),sessionBefore);assert.equal(w.localStorage.getItem('ear-training-v1'),stateBefore);
+ }else assert.equal(d.querySelector('#listen-broken'),null);
  assert.ok(!d.querySelector('[data-answer]').disabled);
  }
  }

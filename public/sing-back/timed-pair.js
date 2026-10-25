@@ -1,6 +1,6 @@
-import {detectPitch,centsFromTarget} from './pitch.js?v=warmup-hold400-v7';
-import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=scale-tolerance40-11';
-export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},onBusyChange=()=>{},prefix='timed-',pattern=null,slotMs=SLOT_MS,demoMs=4000,countMs=1800,requiredMs=REQUIRED_ACCURATE_MS,tolerance=25}={}){
+import {detectPitch,centsFromTarget} from './pitch.js?v=all-singing40-12';
+import {createTimedRound,timelinePhase,SLOT_MS,REQUIRED_ACCURATE_MS} from './timeline.js?v=all-singing40-12';
+export function createTimedPair(env=window,{onActivate=()=>{},onSuccess=()=>{},onBusyChange=()=>{},prefix='timed-',pattern=null,slotMs=SLOT_MS,demoMs=4000,countMs=1800,requiredMs=REQUIRED_ACCURATE_MS,tolerance=40}={}){
  const $=id=>env.document.getElementById(prefix+id);
  let context,stream,input,analyser,raf,running=false,pending=false,serial=0,notes=[48,50],origin=0,withSinging=false,round,lastFrame=0,roundDemoMs=demoMs;
  const cache=new Map();let sources=[];

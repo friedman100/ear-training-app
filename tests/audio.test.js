@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {playBassSequence,playChord,play,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
+import {playBassSequence,playChord,play,CHORD_DURATION,NOTE_DURATION,NOTE_GAP,RELEASE_TAIL,PLAYBACK_DURATION_MS} from '../src/audio.js';
 test('sampled piano is softened on initial and repeated playback with a gentle overlapping release',async()=>{
  const original={AudioContext:globalThis.AudioContext,window:globalThis.window,fetch:globalThis.fetch,setTimeout:globalThis.setTimeout};
  const notes=[],envelopes=[],delays=[];
@@ -47,6 +47,7 @@ test('sampled piano is softened on initial and repeated playback with a gentle o
  const before=notes.length;await playChord(tones,broken);const played=notes.slice(before);assert.equal(played.length,tones.length);
  played.forEach((note,i)=>assert.ok(Math.abs(note.startTime-played[0].startTime-(broken?i*.85:0))<1e-9));
  assert.equal(envelopes.at(-1)[1].v,broken?1:1/Math.sqrt(tones.length));
+ played.forEach(note=>assert.ok(Math.abs(note.stopTime-note.startTime-(broken?NOTE_DURATION:CHORD_DURATION)-RELEASE_TAIL)<1e-9));
  }
  const {bassPlan}=await import('../src/bass.js');
  for(const bassOnly of [false,true]){

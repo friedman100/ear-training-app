@@ -25,7 +25,7 @@ export function centsFromTarget(frequency,targetMidi){
  const midi=69+12*Math.log2(frequency/440);
  return ((midi-targetMidi+6)%12+12)%12*100-600;
 }
-export function createTracker({tolerance=25,holdMs=650}={}){
+export function createTracker({tolerance=40,holdMs=650}={}){
  let history=[],stableSince=null,lastTime=null,success=false;
  return {
  reset(){history=[];stableSince=null;lastTime=null;success=false;},

@@ -23,7 +23,7 @@ test('silence, unpitched noise and weak input produce no pitch feedback',()=>{
  let seed=123;const noise=Float32Array.from({length:4096},()=>{seed=(seed*16807)%2147483647;return (seed/2147483647-.5)*.2;});
  assert.equal(detectPitch(noise,48000),null);assert.equal(detectPitch(tone(220,48000,.001),48000),null);
 });
-test('25-cent tolerance requires sustained accuracy; noisy gaps reset the hold',()=>{
+test('40-cent tolerance requires sustained accuracy; noisy gaps reset the hold',()=>{
  const tracker=createTracker(),frequency=130.8128*2**(20/1200);let result;
  for(let t=0;t<=700;t+=50)result=tracker.update(detected(frequency),48,t);
  assert.equal(result.success,false);result=tracker.update(detected(frequency),48,750);assert.equal(result.success,true);
@@ -31,7 +31,7 @@ test('25-cent tolerance requires sustained accuracy; noisy gaps reset the hold',
  assert.equal(tracker.update(null,48,450).reliable,false);
  for(let t=500;t<=1000;t+=50)result=tracker.update(detected(130.8128),48,t);
  assert.equal(result.success,false);
- tracker.reset();for(let t=0;t<=2000;t+=50)result=tracker.update(detected(130.8128*2**(30/1200)),48,t);assert.equal(result.success,false);
+ tracker.reset();for(let t=0;t<=2000;t+=50)result=tracker.update(detected(130.8128*2**(41/1200)),48,t);assert.equal(result.success,false);
 });
 test('single-frame pitch outliers are smoothed and uncertain detections show listening',()=>{
  const tracker=createTracker();for(let t=0;t<250;t+=50)tracker.update(detected(130.8128),48,t);
@@ -170,7 +170,7 @@ test('short warmup uses its own timing and accuracy threshold without changing t
  s.tick(1550);assert.ok(d.querySelector('#warmup-target1').classList.contains('active'));
  s.tick(6350);assert.ok(d.querySelector('#warmup-stop').hidden===false);
  s.tick(6500);assert.equal(d.querySelector('#warmup-stop').hidden,true);
- assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=warmup-hold400-v7/);
+ assert.match(await readFile('public/sing-back/index.html','utf8'),/app\.js\?v=all-singing40-12/);
  await s.w.happyDOM.close();
  });
 
@@ -189,16 +189,16 @@ test('warmup retry skips piano, counts in, clears previous results and scores a 
  d.querySelector('#warmup-mic').click();assert.equal(retry.disabled,true);await s.w.happyDOM.close();
 });
 
-test('warmup accepts 400ms accumulated accuracy while retaining the 25-cent boundary and pair threshold',()=>{
+test('warmup accepts 400ms accumulated accuracy while retaining the 40-cent boundary and pair threshold',()=>{
  assert.equal(WARMUP_TIMING.requiredMs,400);
  const start=WARMUP_TIMING.demoMs+WARMUP_TIMING.countMs;
  const round=createTimedRound([48,50,52,50],WARMUP_TIMING);
  const f=130.8128;
  // Two accurate segments separated by a brief out-of-range wobble.
- for(let t=0;t<=600;t+=50){const cents=t===300?35:20;round.update(detected(f*2**(cents/1200)),start+t);}
+ for(let t=0;t<=600;t+=50){const cents=t===300?45:20;round.update(detected(f*2**(cents/1200)),start+t);}
  assert.equal(round.results[0].goodMs,400);assert.equal(round.results[0].accurate,true);
  const outside=createTimedRound([48,50,52,50],WARMUP_TIMING);
- for(let t=0;t<=1400;t+=50)outside.update(detected(f*2**(26/1200)),start+t);
+ for(let t=0;t<=1400;t+=50)outside.update(detected(f*2**(41/1200)),start+t);
  assert.equal(outside.results[0].goodMs,0);assert.equal(outside.results[0].accurate,false);
  const pair=createTimedRound([48,50]);for(let t=5800;t<=6300;t+=50)pair.update(detected(f),t);
  assert.equal(pair.results[0].goodMs,400);assert.equal(pair.results[0].accurate,false);
@@ -374,16 +374,16 @@ test('guided warmup success clearly announces the new pattern and places a prima
  assert.equal(d.querySelector('[data-warmup-step="0"]').getAttribute('aria-current'),'step');assert.equal(d.querySelector('[data-warmup-step="1"]').textContent.includes('נעול'),false);next.click();assert.equal(panel.hidden,true);assert.equal(d.querySelector('[data-warmup-step="1"]').getAttribute('aria-current'),'step');await s.w.happyDOM.close();
 });
 
-test('40-cent scale tolerance accepts both signs and octaves without relaxing other timed exercises',()=>{
+test('40-cent default tolerance accepts both signs and octaves across timed exercises',()=>{
  const notes=[48,50,52,53,55,53,52,50,48],base={slotMs:1800,demoMs:0,countMs:0,requiredMs:400};
  for(const cents of [-41,-39,-35,35,39,41])for(const octave of [0,12]){
  const relaxed=createTimedRound(notes,{...base,tolerance:40}),standard=createTimedRound(notes,base);
  for(let t=0;t<1600;t+=50){const signal=detected(440*2**((notes[0]+octave-69)/12)*2**(cents/1200));relaxed.update(signal,t);standard.update(signal,t);}
- assert.equal(relaxed.results[0].accurate,Math.abs(cents)<40);assert.equal(standard.results[0].accurate,false);
+ assert.equal(relaxed.results[0].accurate,Math.abs(cents)<40);assert.equal(standard.results[0].accurate,Math.abs(cents)<40);
  }
- assert.equal(WARMUP_PATTERNS[2].tolerance,40);assert.ok(WARMUP_PATTERNS.filter((_,i)=>i!==2).every(p=>(p.tolerance??25)===25));
+ assert.equal(WARMUP_PATTERNS[2].tolerance,40);assert.ok(WARMUP_PATTERNS.filter((_,i)=>i!==2).every(p=>(p.tolerance??40)===40));
 });
-test('scale chart, green dots and success share 40 cents, and switching patterns restores 25 cents',async()=>{
+test('scale chart, green dots and success share 40 cents, and switching patterns keeps 40 cents',async()=>{
  const s=await setup({production:true}),d=s.w.document;
  d.querySelector('[data-singing-mode="free"]').click();d.querySelector('[data-exercise="warmup"]').click();d.querySelector('[data-warmup-step="2"]').click();
  const band=Number(d.querySelector('#warmup-target0').getAttribute('height'));assert.ok(Math.abs(band-80*75/700)<1e-8);assert.match(d.querySelector('#warmup-hint').textContent,/±40/);
@@ -391,5 +391,13 @@ test('scale chart, green dots and success share 40 cents, and switching patterns
  const notes=[48,50,52,53,55,53,52,50,48],start=1850;
  for(let t=start;t<start+notes.length*1800;t+=50){const midi=notes[Math.floor((t-start)/1800)];s.setSignal(tone(440*2**((midi-69)/12)*2**(35/1200)));s.tick(t);}
  s.tick(start+notes.length*1800+50);assert.equal(d.querySelector('#warmup-success').hidden,false);assert.ok([...d.querySelectorAll('#warmup-trace circle')].every(dot=>dot.getAttribute('fill')==='#3f8c43'));
- d.querySelector('[data-warmup-step="0"]').click();assert.match(d.querySelector('#warmup-hint').textContent,/±25/);assert.ok(Math.abs(Number(d.querySelector('#warmup-target0').getAttribute('height'))-50*75/400)<1e-8);await s.w.happyDOM.close();
+ d.querySelector('[data-warmup-step="0"]').click();assert.match(d.querySelector('#warmup-hint').textContent,/±40/);assert.ok(Math.abs(Number(d.querySelector('#warmup-target0').getAttribute('height'))-80*75/400)<1e-8);await s.w.happyDOM.close();
+});
+
+test('single-note default accepts 39 cents in either direction and rejects 41 cents',()=>{
+ for(const cents of [-41,-39,39,41]){
+  const tracker=createTracker();let result;
+  for(let t=0;t<=1200;t+=50)result=tracker.update(detected(130.8128*2**(cents/1200)),48,t);
+  assert.equal(result.success,Math.abs(cents)<40);
+ }
 });

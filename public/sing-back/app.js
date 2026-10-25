@@ -1,6 +1,6 @@
-import {WARMUP_TIMING} from './timeline.js?v=warmup-hold400-v7';
-import {createTimedPair} from './timed-pair.js?v=warmup-hold400-v7';
-import {detectPitch,createTracker} from './pitch.js?v=warmup-hold400-v7';
+import {WARMUP_TIMING} from './timeline.js?v=all-singing40-12';
+import {createTimedPair} from './timed-pair.js?v=all-singing40-12';
+import {detectPitch,createTracker} from './pitch.js?v=all-singing40-12';
 
 export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false}={}){
  const doc=env.document,$=id=>doc.getElementById(prefix+id);
@@ -28,9 +28,9 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  const cents=result.cents,clamped=Math.max(-100,Math.min(100,cents));
  $('needle').hidden=false;$('needle').style.left=`${50+clamped/2}%`;
  $('meter').setAttribute('aria-valuenow',String(Math.round(clamped)));
- const state=Math.abs(cents)<=25?'מדויק — החזיקו את הצליל':cents>0?'גבוה מדי':'נמוך מדי';
+ const state=Math.abs(cents)<=40?'מדויק — החזיקו את הצליל':cents>0?'גבוה מדי':'נמוך מדי';
  $('meter').setAttribute('aria-valuetext',state);label(state);
- $('hint').textContent=Math.abs(cents)<=25?'אתם באזור הנכון. הישארו על הצליל רגע.':cents>0?'נסו להוריד מעט את הקול.':'נסו להעלות מעט את הקול.';
+ $('hint').textContent=Math.abs(cents)<=40?'אתם באזור הנכון. הישארו על הצליל רגע.':cents>0?'נסו להוריד מעט את הקול.':'נסו להעלות מעט את הקול.';
  $('hold').style.width=`${result.progress*100}%`;
  if(result.success&&!successShown){if(pair&&step===0){step=1;tracker.reset();showTarget();clearReading('מצוין! עכשיו שירו את הצליל השני');return;}successShown=true;$('success').hidden=false;onSuccess(current());if(pair){$('steps').querySelectorAll('.pair-note').forEach(n=>{n.classList.remove('active');n.classList.add('done');});}}
  }

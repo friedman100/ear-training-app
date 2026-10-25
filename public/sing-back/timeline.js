@@ -1,4 +1,4 @@
-import {createTracker,centsFromTarget} from './pitch.js?v=warmup-hold400-v7';
+import {createTracker,centsFromTarget} from './pitch.js?v=all-singing40-12';
 export const WARMUP_TIMING=Object.freeze({slotMs:1500,demoMs:6400,countMs:1800,requiredMs:400});
 export const SLOT_MS=1800,DEMO_MS=4000,COUNT_MS=1800;
 export function timelinePhase(elapsed,withSinging=true,{slotMs=SLOT_MS,demoMs=DEMO_MS,countMs=COUNT_MS,noteCount=2}={}){
@@ -10,7 +10,7 @@ export function timelinePhase(elapsed,withSinging=true,{slotMs=SLOT_MS,demoMs=DE
  return {phase:'sing',step:Math.floor(singing/slotMs),position:singing/(noteCount*slotMs)};
 }
 export const REQUIRED_ACCURATE_MS=600;
-export function createTimedRound(notes,{requiredMs=REQUIRED_ACCURATE_MS,tolerance=25,...timing}={}){
+export function createTimedRound(notes,{requiredMs=REQUIRED_ACCURATE_MS,tolerance=40,...timing}={}){
  const results=notes.map(()=>({accurate:false,readings:0,goodMs:0}));let step=-1,lastTime=null,lastGood=false;const tracker=createTracker({tolerance});
  return {results,update(detection,time){
  const phase=timelinePhase(time,true,{...timing,noteCount:notes.length});

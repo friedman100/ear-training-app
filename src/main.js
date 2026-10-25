@@ -39,7 +39,7 @@ const bass=createBassScreen({app,storage,navigation:pathNavigation,bindNavigatio
 const progression=createProgressionScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 const songs=createSongScreen({app,storage,navigation:pathNavigation,bindNavigation:bindPathNavigation});
 function renderSinging(){
- app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1&v=scale-tolerance40-11" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
+ app.innerHTML=`<header><a class="brand" href="./"><span class="brand-icon">♫</span><span>המסלול להוצאת מוזיקה משמיעה<small>האקדמיה לגיטרה של אמיר פרידמן</small></span></a></header>${pathNavigation()}<main class="singing-main">${location.protocol==='file:'?'<section class="panel"><h1>לשמוע ולשיר</h1><p>לתרגול עם מיקרופון, פתחו את האפליקציה באתר המאובטח.</p><a href="https://friedman100.github.io/ear-training-app/singing/">פתיחת תרגול השירה באתר</a></section>':`<iframe id="singing-frame" src="${import.meta.env.BASE_URL}singing/index.html?embedded=1&v=all-singing40-12" title="לשמוע ולשיר — תרגול שירה" allow="microphone" loading="eager"></iframe>`}</main>`;
  bindPathNavigation();
 }
 window.addEventListener('message',event=>{
@@ -51,7 +51,7 @@ const active=()=>state.mode==='guided'?STAGES[state.stage]:state.selected;
 function saveSession(){session.current={q,mode:state.mode,range:state.range,wrong};try{storage.setItem(SESSION_KEY,JSON.stringify(session));}catch{notice='לא ניתן לשמור את התרגול בדפדפן הזה.';}}
 function save(){saveSession();try{storage.setItem('ear-training-v1',JSON.stringify(state));}catch{notice='לא ניתן לשמור בדפדפן הזה. התרגול זמין, אך ההתקדמות לא תישמר.';}}
 function next(){referenceOpen=false;referencePlaying=null;token++;stop();busy=false;playing=false;heard=false;wrong=[];q=question(active(),state.range,state.mode==='guided'?state.history:[]);saveSession();render();}
-async function listen(a=q.start,b=q.end){if(busy)return;if(referencePlaying)stopReference();busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},state.playbackType);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
+async function listen(a=q.start,b=q.end,type=state.playbackType){if(busy)return;if(referencePlaying)stopReference();busy=true;const t=token;render();try{await play(a,b,value=>{if(t===token){playing=value;render();}},()=>{if(t===token){heard=true;render();}},type);if(t===token)heard=true;}catch{notice='לא הצלחנו להשמיע. בדקו את עוצמת הקול ונסו שוב.';}finally{if(t===token){busy=false;playing=false;render();}}}
 const button=(id,label,cls='')=>`<button id="${id}" class="${cls}">${label}</button>`;
 function render(){
  if(section==='songs'){songs.show();return;}
@@ -77,7 +77,7 @@ function render(){
 
  <div class="sound-art" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
  <h2>איזה מרווח מנוגן פה?</h2><p class="exercise-instruction">הקשיבו לשני הצלילים, שירו אותם ובחרו את התשובה</p>
- <div class="practice-actions">${button('listen',busy?(playing?'◌ &nbsp; משמיע…':'◌ &nbsp; מכין צלילים…'):heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${q.solved?button('next','<span aria-hidden="true">→</span><span>המרווח הבא</span>','next'):''}</div>
+ <div class="practice-actions">${button('listen',busy?(playing?'◌ &nbsp; משמיע…':'◌ &nbsp; מכין צלילים…'):heard?'▶ &nbsp; האזנה חוזרת':'▶ &nbsp; האזנה למרווח','play')}${state.playbackType==='harmonic'?button('listen-broken','♪ השמע מפורק','secondary'):''}${q.solved?button('next','<span aria-hidden="true">→</span><span>המרווח הבא</span>','next'):''}</div>
  <div class="listen-hint">אפשר להקשיב שוב, כמה שרוצים</div><button id="my-references" class="reference-help-button">♪ הרפרנסים שלי</button>
 
  <div class="answers">${[...active()].sort((a,b)=>a-b).map(id=>`<button data-answer="${id}" ${!heard||q.solved?'disabled':''} class="answer ${wrong.includes(id)?'wrong':''} ${q.solved&&id===q.interval?'correct':''}">${INTERVALS[id]}${q.solved&&id===q.interval?' ✓':wrong.includes(id)?' ×':''}<small class="interval-english" lang="en" dir="ltr">${ENGLISH_INTERVALS[id]}</small></button>`).join('')}</div>
@@ -107,7 +107,7 @@ function bind(){
  document.querySelectorAll('[data-stop-reference]').forEach(b=>b.onclick=()=>{stopReference();render();});
  document.querySelectorAll('[data-intro-interval]').forEach(b=>b.onclick=()=>{stopReference();const start={low:48,middle:60,high:72}[state.range];auditionReferenceInterval(start,start+Number(b.dataset.introInterval));});
  on('end-session',()=>{token++;stop();busy=false;playing=false;settings=false;session.ended=true;saveSession();render();});
- on('listen',()=>listen());on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
+ on('listen',()=>listen());on('listen-broken',()=>listen(q.start,q.end,'ascending'));on('next',()=>{next();listen();});on('settings',()=>{settings=true;render();});on('close-settings',()=>{settings=false;render();});
  ['guided','free'].forEach(mode=>on(mode,()=>{state.mode=mode;save();next();}));
  document.querySelectorAll('[data-answer]').forEach(b=>b.onclick=()=>{
  const id=Number(b.dataset.answer);const result=answer(q,id);if(result.ignored||!heard)return;
