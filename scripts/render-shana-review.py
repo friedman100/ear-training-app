@@ -7,9 +7,9 @@ import numpy as np
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'public/previews'
 RATE=44100
-NOTES=[57,62,57,62,62,66,62,66,62,66,69,69,67,66,67,66,64]
-# Measured note attacks in the instrumental recording; initial silence removed.
-ONSETS=[0,.465,1.760,2.190,3.530,3.960,5.205,5.610,6.340,6.725,7.110,7.910,8.740,9.565,10.395,10.755,11.205]
+APPROVED=json.loads((ROOT/'src/reference-data/shana-approved.json').read_text())
+NOTES=APPROVED['notes']
+ONSETS=APPROVED['onsets']
 CACHE={}
 def render(name,notes,onsets,holds,releases):
  lead=.12
@@ -39,7 +39,6 @@ OUT.mkdir(exist_ok=True)
 rest=NOTES[6:]
 render('shana-continuation-check.mp3',rest,[i*.85 for i in range(len(rest))],[.65]*(len(rest)-1)+[.9],[.15]*(len(rest)-1)+[.35])
 # Keep the already approved first-six timing, then follow the remaining measured attacks.
-spacing=np.diff(ONSETS)
-holds=[.34,1.14,.30,1.16,.32,1.15]+[round(seconds*.9,3) for seconds in spacing[6:]]+[.85]
+holds=APPROVED['holds']
 assert len(holds)==len(NOTES)
-render('shana-full-rhythm-review.mp3',NOTES,ONSETS,holds,[.12]*(len(NOTES)-1)+[.35])
+render('shana-full-rhythm-review.mp3',NOTES,ONSETS,holds,APPROVED['releases'])

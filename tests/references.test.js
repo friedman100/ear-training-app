@@ -6,7 +6,7 @@ const fixtures={
  'we-wish':[[62,67,67,69,67,66,64,64],[1,1,.5,.5,.5,.5,1,1],[0,1]],
  'amazing-grace':[[62,67,71,67,71,69,67,64,62],[1,2,.5,.5,2,1,2,1,2],[0,1]],
  'royal-fanfare':[[60,60,60,67],[1,.5,.5,3],[2,3]],
- 'shana-avra':[[57,62,57,62,61,66,62,66,62,66,67,69,67,66,67,66,64],[.76,1.46,.64,1.56,.74,1.56,.54,1,.66,.52,.4,1.58,1,1.16,.36,.44,1.26],[2,3]],
+ 'shana-avra':[[57,62,57,62,62,66,62,66,62,66,69,69,67,66,67,66,64],[.93,2.59,.86,2.68,.86,2.49,.81,1.46,.77,.77,1.6,1.66,1.65,1.66,.72,.9,2],[2,3]],
  'iris-chorus':[[62,62,69,69,69,69,67,66,62,64],[1,1,1,1,.5,1,.75,.75,.75,1.5],[1,2]],
  'twinkle':[[60,60,67,67,69,69,67],[1,1,1,1,1,1,2],[1,2]]
 };
@@ -30,9 +30,11 @@ test('pending melodies cannot be played and invalid musical data cannot be promo
  const rested=structuredClone(INTERVAL_REFERENCES.find(r=>r.id==='twinkle'));rested.melody.push({midi:null,beats:1},{midi:60,beats:1});const plan=referencePlan(rested);assert.equal(plan.length,8);assert.ok(Math.abs(plan.at(-1).offset-9*60/rested.bpm)<1e-9);
 });
 
-test('Shana Tova follows the replacement recording timing, breath and held ending',()=>{
+test('production Shana Tova preserves the approved full piano preview exactly',()=>{
  const ref=INTERVAL_REFERENCES.find(r=>r.id==='shana-avra'),plan=referencePlan(ref);
- const measured=[0,.38,1.11,1.43,2.21,2.58,3.36,3.63,4.13,4.46,4.72,4.92,5.71,6.21,6.79,6.97,7.19];
- assert.deepEqual(plan.map(n=>Number(n.offset.toFixed(2))),measured);assert.equal(ref.verification.recording.sha256,'d09552b78fef33aa890a6d51e64a7dedaf3780bcd09a7770d1af74a0ffc7df54');
- assert.ok(plan[3].offset+plan[3].duration+plan[3].release<plan[4].offset-.15);assert.ok(plan.at(-1).duration>.59);assert.equal(plan.at(-1).release,.3);assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[57,62]);
+ const approvedOnsets=[0,.465,1.760,2.190,3.530,3.960,5.205,5.610,6.340,6.725,7.110,7.910,8.740,9.565,10.395,10.755,11.205];
+ const approvedHolds=[.34,1.14,.30,1.16,.32,1.15,.365,.657,.346,.347,.72,.747,.742,.747,.324,.405,.85];
+ assert.deepEqual(plan.map(n=>Number(n.offset.toFixed(3))),approvedOnsets);assert.equal(ref.verification.recording.sha256,'0dc5a68799cbb10e8083719a16d0e5aafd5a57865e39a660a3f74c887fabc650');
+ plan.forEach((n,i)=>{assert.ok(Math.abs(n.duration-approvedHolds[i])<1e-9,`note ${i+1} hold`);assert.equal(n.release,i===16?.35:.12);});
+ assert.equal(plan[4].midi,62);assert.deepEqual(plan.slice(10,12).map(n=>n.midi),[69,69]);assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[57,62]);
 });
