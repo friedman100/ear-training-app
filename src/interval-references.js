@@ -5,6 +5,9 @@ const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256=
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 const approvedShanaMelody=shanaApproved.notes.map((midi,i)=>{const seconds=i<shanaApproved.notes.length-1?shanaApproved.onsets[i+1]-shanaApproved.onsets[i]:1,beats=Number((seconds*2).toFixed(6));return {midi,beats,gate:shanaApproved.holds[i]/(beats/2),release:shanaApproved.releases[i]};});
 export const INTERVAL_REFERENCES=[
+ {id:'the-simpsons',title:'משפחת סימפסון — The Simpsons',interval:6,bpm:100,
+  melody:melody([60,66,67],[1,2,2]).map((note,i)=>({...note,gate:1,release:i===2?.5:.25})),intervalNotes:[0,1],
+  verification:verified(['https://jadebultitude.com/augmented-4th/','https://www.ssoar.info/ssoar/bitstream/document/95995/1/95995_1.pdf'],'שלושת צלילי הפתיחה המושרת של Danny Elfman, C4–F♯4–G4, על The–Simp–sons. המקורות מאמתים את שלושת הגבהים ואת הטריטון בין שתי ההברות הראשונות. תזמון הדגמה פדגוגי מתון: פעימה אחת ושני צלילים באורך שתי פעימות, ב־100 BPM, עם החזקה ודעיכה רכה; אינו תעתיק קצבי מדויק של גרסת שידור מסוימת. אין שימוש בנושא האינסטרומנטלי שמתחיל ב־C–E–F♯, ואין הקלטה מקורית.')},
  {id:'jaws',title:'מלתעות — Jaws',interval:1,bpm:100,
   melody:melody([52,53,52,53,52,53,52,53],[.5,.5,.5,.5,.5,.5,.5,.5]).map((note,i)=>({...note,gate:.85,release:i===7?.35:.12})),intervalNotes:[0,1],
   verification:verified(['https://en.wikipedia.org/wiki/Jaws_(soundtrack)','https://app.hoffmanacademy.com/lessons/piano/minor-2nds-major-2nds/video/?cp=0'],'מוטיב הכריש מאת John Williams: חילוף E–F, סקונדה קטנה עולה. הדגמה פדגוגית קצרה של ארבעה זוגות בפסנתר במנעד E3–F3, בשמיניות בקצב אחיד 100. אין טענה לשחזור ההאצה, התזמור או קצב קטע מסוים בפסקול; זוג המרווח זהה לצלילי המוטיב.')},
