@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
- 'cant-stop':[[52,62,64,52,52,52,62,64],[.5,.5,.5,.25,.25,.5,.5,1],[0,1]],
+ 'cant-stop':[[52,62,64,52,52,52,62,64],[.5,.5,.5,.25,.25,.25,.5,.25],[0,1]],
  'nad-ned':[[60,69,65,60,69,65],[1,1,2,1,1,2],[0,1]],
  'fortunate-son':[[59,67,57,65,55,64,55,62],[.5,3.5,.5,3.5,.5,3.5,.5,3.5],[0,1]],
  'the-simpsons':[[60,66,67],[1,2,2],[0,1]],
@@ -84,8 +84,8 @@ test('CCR follows the user count: low on one, high on the and held through beats
 });
 
 test('Cant Stop preserves the user eight-note riff and clustered sixteenth-note E attacks',()=>{
- const ref=referencesFor(10)[0],plan=referencePlan(ref),beat=60/91;
- assert.equal(ref.bpm,91);assert.deepEqual(plan.map(n=>n.midi),[52,62,64,52,52,52,62,64]);assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[52,62]);
- assert.deepEqual(ref.intervalNotes,[0,1]);assert.deepEqual(plan.map(n=>Number((n.offset/beat).toFixed(6))),[0,.5,1,1.5,1.75,2,2.5,3]);
- assert.ok(Math.abs(plan.at(-1).offset+plan.at(-1).duration-4*beat)<1e-9);assert.equal(ref.verification.status,'verified');
+ const ref=referencesFor(10)[0],plan=referencePlan(ref),beat=60/82;
+ assert.equal(ref.bpm,82);assert.deepEqual(plan.map(n=>n.midi),[52,62,64,52,52,52,62,64]);assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[52,62]);
+ assert.deepEqual(ref.intervalNotes,[0,1]);assert.deepEqual(plan.map(n=>Number((n.offset/beat).toFixed(6))),[0,.5,1,1.5,1.75,2,2.25,2.75]);
+ assert.ok(Math.abs(plan.at(-1).offset+plan.at(-1).duration-3*beat)<1e-9);assert.deepEqual(ref.melody.slice(-3).map(n=>n.beats),[.25,.5,.25]);assert.equal(ref.verification.status,'verified');
 });
