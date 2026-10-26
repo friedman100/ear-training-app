@@ -8,7 +8,7 @@ export const INTERVAL_REFERENCES=[
  {id:'over-the-rainbow',title:'Somewhere Over the Rainbow',interval:12,bpm:88,
   melody:melody([60,72,71,67,69,71,72,60,69,67],[2,2,1,.5,.5,1,1,2,1,3]).map((note,i)=>({...note,gate:1,release:i===9?.5:.25})),intervalNotes:[0,1],
   verification:verified(['https://www.carvedculture.co.uk/blogs/articles/somewhere-over-the-rainbow-kalimba-tab'],'משפט הפתיחה בלבד, לפי סדר הגבהים בתעתיק האותיות: C4–C5–B4–G4–A4–B4–C5–C4–A4–G4. אוקטבה בין שני הצלילים הראשונים. מקצב הדגמה פדגוגי ב־88 BPM עם דעיכה רכה, ללא העתקת תזמון של ביצוע מסוים.')},
- {id:'eli-eli',title:'אלי אלי — הליכה לקיסריה',interval:12,bpm:100,
+ {id:'eli-eli',title:'אלי אלי — שלא ייגמר לעולם',interval:12,bpm:100,
   melody:melody([57,69,64,65,62,65,64,62,61,62,64,57],[1,3,1,3.5,.5,1,.5,.5,1,.5,.5,2]).map((note,i)=>({...note,gate:1,release:i===11?.6:.2})),intervalNotes:[0,1],
   verification:{status:'verified',basis:'user-recording',sources:['user-provided-reference'],notes:'משפט הפתיחה לפי הדוגמה שסופקה: A3–A4–E4–F4–D4–F4–E4–D4–C♯4–D4–E4–A3. התזמון מיושר בעדינות ל־100 BPM, בערכים 1,3,1,3.5,.5,1,.5,.5,1,.5,.5,2. סיום עם החזקה ודעיכה רכה.'}},
  {id:'take-on-me',title:'Take On Me — a-ha',interval:11,bpm:84,
