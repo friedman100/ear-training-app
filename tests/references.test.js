@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
+ 'nad-ned':[[60,69,65,60,69,65],[1,1,2,1,1,2],[0,1]],
+ 'fortunate-son':[[59,67,57,65,55,64,55,62],[.5,.5,.5,.5,.5,.5,.5,.5],[0,1]],
  'the-simpsons':[[60,66,67],[1,2,2],[0,1]],
  'jaws':[[52,53,52,53,52,53,52,53],[.5,.5,.5,.5,.5,.5,.5,.5],[0,1]],
  'pink-panther':[[63,64,null,66,67,null,63,64,66,67,72,71],[.5,1.5,.5,.5,1.5,.5,.5,.75,.5,.75,.5,.75],[0,1]],
@@ -22,7 +24,7 @@ const fixtures={
  'twinkle':[[60,60,67,67,69,69,67],[1,1,1,1,1,1,2],[1,2]]
 };
 test('approved source phrases retain pitches, rhythm, repeated notes and exact interval positions',()=>{
- assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,18);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);assert.equal(referencesFor(3).length,3);assert.equal(referencesFor(2).length,2);assert.equal(referencesFor(1).length,2);assert.equal(referencesFor(6).length,1);
+ assert.equal(validateReferences(),true);assert.equal(INTERVAL_REFERENCES.length,20);assert.equal(referencesFor(5).length,4);assert.equal(referencesFor(7).length,3);assert.equal(referencesFor(4).length,3);assert.equal(referencesFor(3).length,3);assert.equal(referencesFor(2).length,2);assert.equal(referencesFor(1).length,2);assert.equal(referencesFor(6).length,1);assert.equal(referencesFor(8).length,1);assert.equal(referencesFor(9).length,1);
  for(const [id,[pitches,beats,indices]]of Object.entries(fixtures)){
  const ref=INTERVAL_REFERENCES.find(r=>r.id===id);assert.deepEqual(ref.melody.map(n=>n.midi),pitches);assert.deepEqual(ref.melody.map(n=>n.beats),beats);assert.deepEqual(ref.intervalNotes,indices);assert.ok(ref.verification.notes);assert.ok(ref.verification.sources.length);
  const plan=referencePlan(ref);let elapsed=0,eventIndex=0;ref.melody.forEach((note,i)=>{if(note.midi!==null){const event=plan[eventIndex++];assert.ok(Math.abs(event.offset-elapsed)<1e-9);assert.equal(event.midi,pitches[i]);assert.ok(Math.abs(event.duration-beats[i]*60/ref.bpm*(note.gate??.94))<1e-9);}elapsed+=beats[i]*60/ref.bpm;});assert.equal(plan.length,eventIndex);
@@ -64,4 +66,11 @@ test('minor thirds preserve riff rests, repeated openings and the tied Oseh Shal
  assert.deepEqual(plan.map(n=>Number((n.offset*seven.bpm/60).toFixed(3))),[0,1.5,2,2.75,3.5,4,6]);
  const oseh=referencesFor(3).find(r=>r.id==='oseh-shalom');assert.equal(oseh.melody.at(-1).beats,4);assert.equal(referencePlan(oseh).length,8);
  const smoke=referencesFor(3).find(r=>r.id==='smoke-on-the-water');assert.equal(smoke.melody.filter(n=>n.midi===null).length,2);assert.equal(smoke.melody.reduce((s,n)=>s+n.beats,0),16);
+});
+
+test('sixth references distinguish major and minor sixths and preserve the complete CCR interval sequence',()=>{
+ const nad=referencesFor(9)[0],ccr=referencesFor(8)[0],plan=referencePlan(ccr);
+ assert.deepEqual(referencePlan(nad,'interval').map(n=>n.midi),[60,69]);assert.deepEqual(referencePlan(ccr,'interval').map(n=>n.midi),[59,67]);
+ assert.deepEqual([0,2,4,6].map(i=>plan[i+1].midi-plan[i].midi),[8,8,9,7]);
+ assert.equal(nad.melody.length,6);assert.equal(ccr.melody.length,8);
 });
