@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
  'over-the-rainbow':[[60,72,71,67,69,71,72,60,69,67],[2,2,1,.5,.5,1,1,2,1,3],[0,1]],
- 'eli-eli':[[57,69],[1,3],[0,1]],
+ 'eli-eli':[[57,69,64,65,62,65,64,62,61,62,64,57],[1,3,1,3.5,.5,1,.5,.5,1,.5,.5,2],[0,1]],
  'take-on-me':[[57,68,69,57,64,66],[2,2,4,2,2,3],[0,1]],
  'cant-stop':[[52,62,64,52,52,52,62,64],[.5,.5,.5,.25,.25,.25,.5,.5],[0,1]],
  'nad-ned':[[60,69,65,60,69,65],[1,1,2,1,1,2],[0,1]],
