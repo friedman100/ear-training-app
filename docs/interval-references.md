@@ -133,7 +133,7 @@
 
 הגרסה הקודמת של ארבעה צלילים נדחתה. לפי תיקון אמיר, הרצף הנוכחי הוא E3–D4–E4–E3–E3–E3–D4–E4: מי–רה–מי–מי מי מי–רה מי. הספטימה הקטנה נמצאת מיד בין E3 ל־D4 (אינדקסים 0–1), ולא לאחר מי כפול. הפתיחה החזרתית של D–E אינה נכללת.
 
-מיקומי הכניסות בפעימות: `0, .5, 1, 1.5, 1.75, 2, 2.25, 2.75`; הקטע מסתיים אחרי שלוש פעימות. קצב הדגמה 82 BPM, מעט איטי יותר מקצב 91 שמצוין בניתוח השיר ב־https://musicscene.com.au/lessons/songs/song-analysis/cant-stop/ . מקור לטכניקת חלוקה לשש־עשריות: https://www.guitarworld.com/lessons/john-frusciante-rhcp-riffs . הגבהים והצלילים החוזרים מוצלבים בטאב https://www.guitartabs.cc/tabs/r/red_hot_chili_peppers/cant_stop_tab_ver_7.html ; המרווח מוצלב עם https://sonid.app/en/interval/c/minor-seventh .
+מיקומי הכניסות בפעימות: `0, .5, 1, 1.5, 1.75, 2, 2.25, 2.75`; התו האחרון מוחזק חצי פעימה (כ־0.37 שניות) ואחריו דעיכה של חצי שנייה, כדי לרכך את הסיום. שאר הכניסות והמקצב נשמרים. קצב הדגמה 82 BPM, מעט איטי יותר מקצב 91 שמצוין בניתוח השיר ב־https://musicscene.com.au/lessons/songs/song-analysis/cant-stop/ . מקור לטכניקת חלוקה לשש־עשריות: https://www.guitarworld.com/lessons/john-frusciante-rhcp-riffs . הגבהים והצלילים החוזרים מוצלבים בטאב https://www.guitartabs.cc/tabs/r/red_hot_chili_peppers/cant_stop_tab_ver_7.html ; המרווח מוצלב עם https://sonid.app/en/interval/c/minor-seventh .
 
 הגרסה מתרגמת את רצף המשתמש לפסנתר עם שמיניות ושש־עשריות, כולל שלושת המי הנמוכים הרצופים באמצע. אין הוספת גובה צליל במקום פריטה מושתקת, ואין שימוש בהקלטת אולפן או טענה שנמדד המיקרו־תזמון שלה. הגרסה נועדה לבדיקת המשתמש מול הריף המוכר.
 
