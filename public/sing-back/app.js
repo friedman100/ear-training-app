@@ -2,7 +2,7 @@ import {WARMUP_TIMING} from './timeline.js?v=all-singing40-12';
 import {createTimedPair} from './timed-pair.js?v=all-singing40-12';
 import {detectPitch,createTracker} from './pitch.js?v=all-singing40-12';
 
-export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false}={}){
+export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false,freezeOnSuccess=false}={}){
  const doc=env.document,$=id=>doc.getElementById(prefix+id);
  const targets=Array.from({length:pair?11:13},(_,i)=>48+i);
  const letters=['C','C♯ / D♭','D','D♯ / E♭','E','F','F♯ / G♭','G','G♯ / A♭','A','A♯ / B♭','B'];
@@ -38,6 +38,7 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  if(!micActive)return;
  raf=env.requestAnimationFrame(frame);
  if(time-lastFrame<50)return;lastFrame=time;
+ if(freezeOnSuccess&&successShown){label('כל הכבוד, שרתם נכון!');$('hint').textContent='אפשר לעבור לתו הבא או לבחור ניסיון נוסף.';$('hold').style.width='100%';return;}
  if(playing||time<blockedUntil){clearReading(playing?'הקשיבו לפסנתר…':'עוד רגע — תכף אפשר לשיר');return;}
  if(requirePlayback&&!heard){clearReading('הקשיבו לצליל לפני שאתם שרים');return;}
  const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);

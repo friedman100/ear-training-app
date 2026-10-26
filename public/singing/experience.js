@@ -2,7 +2,7 @@ import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from './warm
 import {WARMUP_PATTERNS} from './warmup-patterns.js?v=all-singing40-12';
 import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-modes-6';
 import {PROGRESS_KEY,loadProgress,completeTarget,nextTarget,solved} from './progression.js?v=singing-modes-6';
-import {createPrototype} from '../sing-back/app.js?v=singing-modes-6';
+import {createPrototype} from '../sing-back/app.js?v=single-success-14';
 import {createTimedPair} from '../sing-back/timed-pair.js?v=all-singing40-12';
 import {WARMUP_TIMING} from '../sing-back/timeline.js?v=all-singing40-12';
 
@@ -50,7 +50,7 @@ export function createSingingExperience(env=window){
  $('single-success-next').addEventListener('click',()=>{closeSingleSuccess();if(guided()&&progress.completed===10)show('timed',true);else $('next').click();});
  function onSingleSuccess(note){
   if(current!=='single')return;
-  if(guided()){const updated=completeTarget(progress,note);if(updated===progress)return;progress=updated;persist(PROGRESS_KEY,progress);updateProgress();}
+  if(guided()){const updated=completeTarget(progress,note);if(updated!==progress){progress=updated;persist(PROGRESS_KEY,progress);updateProgress();}}
   const finished=guided()&&progress.completed===10;
   $('single-success-detail').textContent=finished?'השלמתם את כל 10 הצלילים! עכשיו אפשר לעבור לשני צלילים.':'עכשיו עוברים לתו הבא. מוכנים?';
   $('single-success-next').textContent=finished?'לשלב הבא — שני צלילים ←':'לתו הבא ←';
@@ -88,7 +88,7 @@ export function createSingingExperience(env=window){
   if(env.setTimeout)env.setTimeout(reveal,150);else reveal();
  }
  const controllers=[],stopAll=()=>{closeSingleSuccess();controllers.forEach(controller=>controller.stop());};
- controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true}));
+ controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true,freezeOnSuccess:true}));
  controllers.push(createTimedPair(env,{onSuccess:onPairSuccess,onBusyChange:value=>{pairBusy=value;updatePairProgress();},onActivate:()=>{controllers[0].stop();controllers[2]?.stop();}}));
  controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,tolerance:warmupPattern.tolerance??40,slotMs:warmupPattern.slotMs??WARMUP_TIMING.slotMs,demoMs:warmupPattern.offsets.length*(warmupPattern.slotMs??WARMUP_TIMING.slotMs)+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
  function show(id,focus=false,stop=true){

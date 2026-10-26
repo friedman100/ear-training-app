@@ -408,7 +408,7 @@ test('free single-note success dialog advances with audio and preserves guided p
  for(let t=450;t<=1600;t+=50)s.tick(t);
  assert.equal(d.querySelector('#single-success-dialog').open,true);
  d.querySelector('#single-success-close').click();assert.equal(d.querySelector('#single-success-dialog').open,false);
- s.tick(1700);assert.equal(d.querySelector('#single-success-dialog').open,false);
+ s.setSignal(new Float32Array(4096));s.tick(1700);assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(d.querySelector('#feedback-label').textContent,'כל הכבוד, שרתם נכון!');s.setSignal(tone(130.8128));
  d.querySelector('#retry').click();for(let t=1750;t<=2900;t+=50)s.tick(t);assert.equal(d.querySelector('#single-success-dialog').open,true);
  const old=d.querySelector('#target-select').value,played=s.played.length;d.querySelector('#single-success-next').click();await flush();
  assert.notEqual(d.querySelector('#target-select').value,old);assert.equal(s.played.length,played+1);assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(s.w.localStorage.getItem(PROGRESS_KEY),saved);
