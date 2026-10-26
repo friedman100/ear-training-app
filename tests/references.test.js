@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {INTERVAL_REFERENCES,referencesFor,referencePlan,validateReferences} from '../src/interval-references.js';
 const fixtures={
  'nad-ned':[[60,69,65,60,69,65],[1,1,2,1,1,2],[0,1]],
- 'fortunate-son':[[59,67,57,65,55,64,55,62],[.5,.5,.5,.5,.5,.5,.5,.5],[0,1]],
+ 'fortunate-son':[[59,67,57,65,55,64,55,62],[.5,3.5,.5,3.5,.5,3.5,.5,3.5],[0,1]],
  'the-simpsons':[[60,66,67],[1,2,2],[0,1]],
  'jaws':[[52,53,52,53,52,53,52,53],[.5,.5,.5,.5,.5,.5,.5,.5],[0,1]],
  'pink-panther':[[63,64,null,66,67,null,63,64,66,67,72,71],[.5,1.5,.5,.5,1.5,.5,.5,.75,.5,.75,.5,.75],[0,1]],
@@ -73,4 +73,11 @@ test('sixth references distinguish major and minor sixths and preserve the compl
  assert.deepEqual(referencePlan(nad,'interval').map(n=>n.midi),[60,69]);assert.deepEqual(referencePlan(ccr,'interval').map(n=>n.midi),[59,67]);
  assert.deepEqual([0,2,4,6].map(i=>plan[i+1].midi-plan[i].midi),[8,8,9,7]);
  assert.equal(nad.melody.length,6);assert.equal(ccr.melody.length,8);
+});
+
+test('CCR follows the user count: low on one, high on the and held through beats two three four',()=>{
+ const ref=INTERVAL_REFERENCES.find(r=>r.id==='fortunate-son'),plan=referencePlan(ref),beat=60/ref.bpm;
+ assert.equal(ref.bpm,72);assert.deepEqual(plan.map(n=>Number((n.offset/beat).toFixed(6))),[0,.5,4,4.5,8,8.5,12,12.5]);
+ for(let i=0;i<8;i+=2){assert.ok(Math.abs(plan[i].duration-.5*beat)<1e-9);assert.ok(Math.abs(plan[i+1].duration-3.5*beat)<1e-9);assert.ok(Math.abs(plan[i+1].offset+plan[i+1].duration-(i/2+1)*4*beat)<1e-9);}
+ assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[59,67]);
 });
