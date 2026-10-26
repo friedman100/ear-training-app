@@ -77,7 +77,7 @@ test('sixth references distinguish major and minor sixths and preserve the compl
 
 test('CCR follows the user count: low on one, high on the and held through beats two three four',()=>{
  const ref=INTERVAL_REFERENCES.find(r=>r.id==='fortunate-son'),plan=referencePlan(ref),beat=60/ref.bpm;
- assert.equal(ref.bpm,84);assert.deepEqual(plan.map(n=>Number((n.offset/beat).toFixed(6))),[0,.5,4,4.5,8,8.5,12,12.5]);
+ assert.equal(ref.bpm,95);assert.deepEqual(plan.map(n=>Number((n.offset/beat).toFixed(6))),[0,.5,4,4.5,8,8.5,12,12.5]);
  for(let i=0;i<8;i+=2){assert.ok(Math.abs(plan[i].duration-.5*beat)<1e-9);assert.ok(Math.abs(plan[i+1].duration-3.5*beat)<1e-9);assert.ok(Math.abs(plan[i+1].offset+plan[i+1].duration-(i/2+1)*4*beat)<1e-9);}
  assert.deepEqual(referencePlan(ref,'interval').map(n=>n.midi),[59,67]);
 });
