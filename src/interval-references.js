@@ -5,6 +5,12 @@ const fromRecording=(span,notes,{source='user:amir-recording-2026-10-25',sha256=
 const melody=(pitches,beats)=>pitches.map((midi,i)=>({midi,beats:beats[i]}));
 const approvedShanaMelody=shanaApproved.notes.map((midi,i)=>{const seconds=i<shanaApproved.notes.length-1?shanaApproved.onsets[i+1]-shanaApproved.onsets[i]:1,beats=Number((seconds*2).toFixed(6));return {midi,beats,gate:shanaApproved.holds[i]/(beats/2),release:shanaApproved.releases[i]};});
 export const INTERVAL_REFERENCES=[
+ {id:'over-the-rainbow',title:'Somewhere Over the Rainbow',interval:12,bpm:88,
+  melody:melody([60,72,71,67,69,71,72,60,69,67],[2,2,1,.5,.5,1,1,2,1,3]).map((note,i)=>({...note,gate:1,release:i===9?.5:.25})),intervalNotes:[0,1],
+  verification:verified(['https://www.carvedculture.co.uk/blogs/articles/somewhere-over-the-rainbow-kalimba-tab'],'משפט הפתיחה בלבד, לפי סדר הגבהים בתעתיק האותיות: C4–C5–B4–G4–A4–B4–C5–C4–A4–G4. אוקטבה בין שני הצלילים הראשונים. מקצב הדגמה פדגוגי ב־88 BPM עם דעיכה רכה, ללא העתקת תזמון של ביצוע מסוים.')},
+ {id:'eli-eli',title:'אלי אלי — הליכה לקיסריה',interval:12,bpm:92,
+  melody:melody([57,69],[1,3]).map((note,i)=>({...note,gate:1,release:i===1?.6:.25})),intervalNotes:[0,1],
+  verification:verified(['https://blog.nli.org.il/giborot-eli-eli/','https://shiru.me/הליכה_לקיסריה/information_and_analysis'],'לחן דוד זהבי למילות חנה סנש. מובאת רק קריאת הפתיחה הראשונה, א־לי, עם קפיצת האוקטבה המתוארת במקורות, מועברת ל־A3–A4. תזמון הדגמה 1,3 ב־92 BPM. המשך המנגינה לא הועתק מתווים: קובץ התווים נמצא אך לא ניתן היה לקרוא את התווים עצמם בכלים הזמינים.')},
  {id:'take-on-me',title:'Take On Me — a-ha',interval:11,bpm:84,
   melody:melody([57,68,69,57,64,66],[2,2,4,2,2,3]).map((note,i)=>({...note,gate:1,release:i===5?.5:.2})),intervalNotes:[0,1],
   verification:verified(['https://www.pianokeyboardnotes.com/take-on-me-piano.html','https://en.wikipedia.org/wiki/Interval_recognition'],'שני משפטי השירה הראשונים בפזמון בלבד, ללא תשובות קולות הרקע: A3–G♯4–A4, A3–E4–F♯4. גבהים לפי תעתיק הפזמון; הספטימה הגדולה היא בין שני הצלילים הראשונים. תזמון הדגמה בחצי־זמן 84 BPM: 2,2,4 ואז 2,2,3 פעימות, עם סיום מקוצר ודעיכה רכה. זהו עיבוד קצר לפסנתר ולא תעתיק תזמון מדויק של ההקלטה.')},
