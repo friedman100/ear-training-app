@@ -253,14 +253,14 @@ test('guided singing requires listening and ten distinct completed questions, su
   const note=progress().notes[progress().index];if(i<5)assert.ok(NATURALS.includes(note));
   if(i===0){d.querySelector('#play').click();await flush();} // Other questions are played by the next button.
   s.finishPiano();s.tick(time+=400);s.setSignal(tone(440*2**((note+1-69)/12)));for(let t=0;t<20;t++)s.tick(time+=50);assert.equal(progress().completed,i);
-  s.setSignal(tone(440*2**((note-69)/12)));for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,i+1);assert.equal(d.querySelector('#singing-progress-bar').getAttribute('aria-valuenow'),String(i+1));
+  s.setSignal(tone(440*2**((note-69)/12)));for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,i+1);assert.equal(d.querySelector('#single-success-dialog').open,true);assert.equal(progress().index,i);assert.equal(d.activeElement.id,'single-success-next');assert.equal(d.querySelector('#singing-progress-bar').getAttribute('aria-valuenow'),String(i+1));
   if(i===0){d.querySelector('#retry').click();for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,1);d.querySelector('#play').click();await flush();s.finishPiano();s.tick(time+=400);for(let t=0;t<23;t++)s.tick(time+=50);assert.equal(progress().completed,1);}
   if(i===4){const saved=progress(),preferences=s.w.localStorage.getItem('ear-training-singing-v1');await s.w.happyDOM.close();s=await setup({production:true,singingProgress:saved,singingSaved:preferences});d=s.w.document;time=0;assert.equal(progress().completed,5);assert.equal(d.querySelector('#next').disabled,false);assert.equal(d.querySelector('[data-exercise="timed"]').disabled,true);d.querySelector('#mic').click();await flush();}
   if(i===1){d.querySelector('#play').click();await flush();}
-  if(i<9){const played=s.played.length;d.querySelector('#next').click();await flush();assert.equal(s.played.length,played+1);assert.equal(progress().index,i+1);assert.equal(d.querySelector('#next').disabled,true);}
+  if(i<9){const played=s.played.length;d.querySelector('#single-success-next').click();await flush();assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(s.played.length,played+1);assert.equal(progress().index,i+1);assert.equal(d.querySelector('#next').disabled,true);}
  }
  assert.equal(d.querySelector('#singing-stage-complete').hidden,false);assert.equal(d.querySelector('#single-exercise').hidden,false);assert.equal(d.querySelector('[data-exercise="timed"]').disabled,false);assert.equal(d.querySelector('#next').hidden,true);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');
- d.querySelector('#open-two-notes').click();assert.equal(d.querySelector('#timed-exercise').hidden,false);
+ assert.match(d.querySelector('#single-success-detail').textContent,/10/);d.querySelector('#single-success-next').click();assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(d.querySelector('#timed-exercise').hidden,false);
  const again=await setup({production:true,singingProgress:progress(),singingSaved:s.w.localStorage.getItem('ear-training-singing-v1')});assert.equal(again.w.document.querySelector('[data-exercise="timed"]').disabled,false);assert.equal(again.w.document.querySelector('#timed-exercise').hidden,false);
  await s.w.happyDOM.close();await again.w.happyDOM.close();
 });
@@ -400,4 +400,17 @@ test('single-note default accepts 39 cents in either direction and rejects 41 ce
   for(let t=0;t<=1200;t+=50)result=tracker.update(detected(130.8128*2**(cents/1200)),48,t);
   assert.equal(result.success,Math.abs(cents)<40);
  }
+});
+
+test('free single-note success dialog advances with audio and preserves guided progress',async()=>{
+ const s=await setup({production:true}),d=s.w.document;d.querySelector('[data-singing-mode="free"]').click();const saved=s.w.localStorage.getItem(PROGRESS_KEY);
+ d.querySelector('#mic').click();await flush();d.querySelector('#play').click();await flush();s.finishPiano();s.tick(400);
+ for(let t=450;t<=1600;t+=50)s.tick(t);
+ assert.equal(d.querySelector('#single-success-dialog').open,true);
+ d.querySelector('#single-success-close').click();assert.equal(d.querySelector('#single-success-dialog').open,false);
+ s.tick(1700);assert.equal(d.querySelector('#single-success-dialog').open,false);
+ d.querySelector('#retry').click();for(let t=1750;t<=2900;t+=50)s.tick(t);assert.equal(d.querySelector('#single-success-dialog').open,true);
+ const old=d.querySelector('#target-select').value,played=s.played.length;d.querySelector('#single-success-next').click();await flush();
+ assert.notEqual(d.querySelector('#target-select').value,old);assert.equal(s.played.length,played+1);assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(s.w.localStorage.getItem(PROGRESS_KEY),saved);
+ await s.w.happyDOM.close();
 });

@@ -41,7 +41,21 @@ export function createSingingExperience(env=window){
   doc.querySelectorAll('[data-exercise]').forEach(button=>{const unavailable=!accessible(button.dataset.exercise);button.disabled=unavailable;button.setAttribute('aria-disabled',String(unavailable));button.querySelector('small')?.remove();if(unavailable){const hint=doc.createElement('small');hint.textContent='בהמשך המסלול';button.append(hint);}});
   const next=ids[ids.indexOf(current)+1];$('next-exercise').disabled=!!next&&!accessible(next);
  }
- function onSingleSuccess(note){if(!guided())return;const updated=completeTarget(progress,note);if(updated===progress)return;progress=updated;persist(PROGRESS_KEY,progress);updateProgress();resize();}
+ const singleDialog=doc.createElement('dialog');singleDialog.id='single-success-dialog';singleDialog.className='single-success-dialog';
+ singleDialog.setAttribute('aria-labelledby','single-success-title');singleDialog.setAttribute('aria-describedby','single-success-detail');
+ singleDialog.innerHTML='<span class="success-check" aria-hidden="true">✓</span><h2 id="single-success-title">כל הכבוד, שרתם נכון!</h2><p id="single-success-detail"></p><button id="single-success-next" class="primary">לתו הבא ←</button><button id="single-success-close" class="secondary">להישאר בתו הזה</button>';
+ doc.body.append(singleDialog);
+ function closeSingleSuccess(){if(singleDialog.open)singleDialog.close();}
+ $('single-success-close').addEventListener('click',closeSingleSuccess);
+ $('single-success-next').addEventListener('click',()=>{closeSingleSuccess();if(guided()&&progress.completed===10)show('timed',true);else $('next').click();});
+ function onSingleSuccess(note){
+  if(current!=='single')return;
+  if(guided()){const updated=completeTarget(progress,note);if(updated===progress)return;progress=updated;persist(PROGRESS_KEY,progress);updateProgress();}
+  const finished=guided()&&progress.completed===10;
+  $('single-success-detail').textContent=finished?'השלמתם את כל 10 הצלילים! עכשיו אפשר לעבור לשני צלילים.':'עכשיו עוברים לתו הבא. מוכנים?';
+  $('single-success-next').textContent=finished?'לשלב הבא — שני צלילים ←':'לתו הבא ←';
+  resize();if(!singleDialog.open)singleDialog.showModal();$('single-success-next').focus();singleDialog.scrollIntoView?.({block:'center'});
+ }
  function updatePairProgress(){
   const count=pairProgress.completed,q=pairProgress.questions[pairProgress.index];
   $('pair-progress-label').textContent=`השלמתם ${count} מתוך 4 זוגות`;
@@ -73,7 +87,7 @@ export function createSingingExperience(env=window){
   // Allow the host page to apply the new embedded height before bringing success into view.
   if(env.setTimeout)env.setTimeout(reveal,150);else reveal();
  }
- const controllers=[],stopAll=()=>controllers.forEach(controller=>controller.stop());
+ const controllers=[],stopAll=()=>{closeSingleSuccess();controllers.forEach(controller=>controller.stop());};
  controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true}));
  controllers.push(createTimedPair(env,{onSuccess:onPairSuccess,onBusyChange:value=>{pairBusy=value;updatePairProgress();},onActivate:()=>{controllers[0].stop();controllers[2]?.stop();}}));
  controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,tolerance:warmupPattern.tolerance??40,slotMs:warmupPattern.slotMs??WARMUP_TIMING.slotMs,demoMs:warmupPattern.offsets.length*(warmupPattern.slotMs??WARMUP_TIMING.slotMs)+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
@@ -120,6 +134,7 @@ export function createSingingExperience(env=window){
  $('open-warmup').addEventListener('click',()=>show('warmup',true));$('open-two-notes').addEventListener('click',()=>show('timed',true));
  $('next-pair').addEventListener('click',()=>{if(!guided())return;const updated=nextPair(pairProgress);if(updated===pairProgress||pairBusy)return;if(!controllers[1].setQuestion(updated.questions[updated.index]))return;pairProgress=updated;persist(PAIR_KEY,pairProgress);save();updatePairProgress();});
  $('next').addEventListener('click',()=>{
+  closeSingleSuccess();
   if(!guided()){const options=Array.from({length:13},(_,i)=>48+i).filter(n=>n!==freeNote);freeNote=options[Math.floor(Math.random()*options.length)];controllers[0].setTarget(freeNote);save();controllers[0].play();return;}
   const updated=nextTarget(progress);if(updated===progress)return;progress=updated;controllers[0].setTarget(progress.notes[progress.index]);persist(PROGRESS_KEY,progress);save();updateProgress();controllers[0].play();
  });
