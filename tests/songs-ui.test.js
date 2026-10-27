@@ -59,3 +59,14 @@ test('song library, real-media controls and both answer stages work with indepen
  assert.equal(state(w).selected.partId,'chorus');assert.equal(d.querySelectorAll('[data-song-quality]').length,0);assert.match(d.querySelector('#songs-part-title').textContent,/פזמון/);assert.equal(d.querySelector('.song-practice-title').textContent,'עכשיו מוציאים את האקורדים של הפזמון');assert.equal(w.youtubeInstances[0].time,87);assert.equal(songEntry(state(w),id,'chorus').completed,false);await enter(w,[45,40]);click(w,'check');choose(w,['minor','minor']);click(w,'check');assert.equal(songEntry(state(w),id,'chorus').completed,true);assert.equal(state(w).selected.partId,'chorus');assert.ok(d.querySelector('.song-success'));assert.equal(d.querySelector('#songs-success-title').textContent,'כל הכבוד! הוצאתם את השיר כמו שצריך');assert.match(d.querySelector('#songs-success-description').textContent,/כל חלקי השיר/);assert.equal(d.querySelector('#songs-popup-next'),null);
  const saved={[SONG_KEY]:w.localStorage.getItem(SONG_KEY)};w.document.querySelector('[data-section="intervals"]').click();await w.happyDOM.close();w=setup(saved,false,false,true);d=w.document;d.querySelector(`[data-song-open="${id}"]`).click();await flush();assert.ok(d.querySelector('.song-success'));assert.match(d.querySelector('.song-practice-step').textContent,/הוצאתם את השיר כמו שצריך/);assert.equal(w.youtubeInstances[0].time,87);assert.equal(songEntry(state(w),id,'intro-verse').completed,true);assert.equal(songEntry(state(w),'first-light','verse'),undefined);w.document.querySelector('[data-section="intervals"]').click();await w.happyDOM.close();
  });
+
+test('song modes preserve independent answers while allowing part switching',async()=>{
+ const w=setup(),d=w.document,song=SONGS[0];d.querySelector(`[data-song-open="${song.id}"]`).click();
+ const guided=w.localStorage.getItem(SONG_KEY);d.querySelector('[data-song-mode="free"]').click();
+ assert.equal(d.querySelector('[data-song-mode="free"]').getAttribute('aria-pressed'),'true');
+ await enter(w,[36,43,45,41]);
+ const free=w.localStorage.getItem('ear-training-songs-free-v1');assert.notEqual(free,null);assert.equal(w.localStorage.getItem(SONG_KEY),guided);
+ d.querySelector(`[data-song-part="${song.parts[1].id}"]`).click();assert.match(d.querySelector('#songs-part-title').textContent,new RegExp(song.parts[1].name));
+ d.querySelector(`[data-song-part="${song.parts[0].id}"]`).click();assert.deepEqual(JSON.parse(w.localStorage.getItem('ear-training-songs-free-v1')).songs[song.id].parts[song.parts[0].id].round.answer,[36,43,45,41]);
+ d.querySelector('[data-song-mode="guided"]').click();assert.equal(w.localStorage.getItem('ear-training-songs-free-v1')===null,false);assert.deepEqual(round(w).answer,[null,null,null,null]);await w.happyDOM.close();
+});
