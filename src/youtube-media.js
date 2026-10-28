@@ -36,7 +36,7 @@ export function createYouTubeMedia({window,document,loadAPI=()=>loadYouTube(wind
  }
  return {addEventListener:(...args)=>events.addEventListener(...args),load(){},mount,destroy,
  get ready(){return ready;},get src(){return videoId;},set src(value){videoId=value;},
- get currentTime(){return position;},set currentTime(value){position=value;if(ready)player.seekTo(value,true);},
+ get currentTime(){return position;},set currentTime(value){position=value;if(ready){if(paused)player.cueVideoById({videoId,startSeconds:value});else player.seekTo(value,true);}},
  get duration(){return length;},get paused(){return paused;},get playbackRate(){return rate;},set playbackRate(value){if(ready&&(player.getAvailablePlaybackRates()||[1]).includes(value))player.setPlaybackRate(value);},
  async play(){if(!ready)throw Error(error||'הנגן עדיין נטען');player.playVideo();},pause(){paused=true;if(ready)player.pauseVideo();},
  refresh(){rates();if(error)status(error);}
