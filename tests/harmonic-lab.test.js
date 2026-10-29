@@ -18,5 +18,13 @@ test('isolated built page has manual steps, all helpers, no microphone on load o
  const w=new Window({url:'https://lab.example/lab/harmonic-separation/'});w.document.write((await readFile('dist-lab/lab/harmonic-separation/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));w.localStorage.setItem('ear-training-v1','preserved');
  w.eval(await readFile('dist-lab/assets/'+(await readdir('dist-lab/assets')).find(n=>n.endsWith('.js')),'utf8'));
  const d=w.document;assert.equal(d.querySelector('#mic-state').textContent,'המיקרופון כבוי');assert.equal(d.querySelector('#selection'),null);assert.equal(d.querySelector('#root'),null);assert.equal(d.querySelectorAll('#target-lines line').length,2);assert.equal(d.querySelectorAll('#interval option').length,6);
- d.querySelector('#focus').value='low';d.querySelector('#focus').dispatchEvent(new w.Event('change'));assert.match(d.querySelector('#gauge-target').textContent,/הנמוך/);d.querySelector('[data-mode="free"]').click();assert.equal(w.localStorage.getItem('ear-training-v1'),'preserved');assert.equal(w.localStorage.length,1);await w.happyDOM.close();
+ d.querySelector('#focus').value='low';d.querySelector('#focus').dispatchEvent(new w.Event('change'));assert.match(d.querySelector('#gauge-target').textContent,/הנמוך/);d.querySelector('[data-mode="free"]').click();assert.equal(w.localStorage.getItem('ear-training-v1'),'preserved');assert.equal(w.localStorage.length,2);await w.happyDOM.close();
+});
+
+import {STAGES,initialCourse,completePair,advanceCourse,pickInterval,stageDone,loadCourse,COURSE_KEY} from '../lab/harmonic-separation/course.js';
+test('five stages require both notes once per pair and balanced interval coverage, survive reload',()=>{
+ let s=initialCourse();for(let stage=0;stage<5;stage++){assert.equal(s.stage,stage);assert.equal(advanceCourse(s),false);const counts={};
+ while(!stageDone(s)){const interval=pickInterval(s,()=>.5);counts[interval]=(counts[interval]||0)+1;s.pair={low:60,interval,achieved:['low'],counted:false};assert.equal(completePair(s),false);s.pair.achieved.push('high');assert.equal(completePair(s),true);assert.equal(completePair(s),false);s=loadCourse({getItem:()=>JSON.stringify(s)});assert.equal(s.pair.counted,true);}
+ for(const interval of STAGES[stage].intervals)assert.equal(counts[interval],STAGES[stage].each);assert.equal(advanceCourse(s),stage<4);
+ }assert.equal(loadCourse({getItem:()=>'{bad'}).stage,0);
 });
