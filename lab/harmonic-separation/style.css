@@ -10,3 +10,5 @@
 .gauge-labels{font-size:10px}
 .gauge-labels span:nth-child(2){font-size:9px}
 .gauge{margin-top:24px}.hold-track{height:7px;background:#eef1e7;border-radius:8px;overflow:hidden}.hold-track div{height:100%;background:#7eaa69;width:0%}
+
+#gauge-target{font-size:clamp(24px,5vw,32px);font-weight:bold;color:#244f3e;background:#eef6e7;border:1px solid #c7dcb9;border-radius:12px;padding:18px;text-align:center}#matched-dialog{color:#244f3e;background:#f8fbf4;border:1px solid #afc69d;border-radius:20px;padding:28px;text-align:center;max-width:440px;width:calc(100% - 32px)}#matched-dialog::backdrop{background:#153c3459}#matched-detail{font-size:22px}#matched-dialog h2{font-size:26px}
