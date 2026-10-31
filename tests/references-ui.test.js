@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Window} from 'happy-dom';
 import {readFile,readdir} from 'node:fs/promises';
-import {initialState} from '../src/logic.js';
+import {initialState,STAGES} from '../src/logic.js';
 import {newSession,SESSION_KEY} from '../src/session.js';
 const file=(await readdir('dist/assets')).find(f=>f.endsWith('.js')),source=await readFile('dist/assets/'+file,'utf8');
 const flush=async()=>{for(let i=0;i<80;i++)await Promise.resolve();};
@@ -40,4 +40,12 @@ test('reference help cancels a playing question and a second reference cancels t
 });
 test('existing unlock introductions automatically include only the new interval references and omit empty groups',async()=>{
  for(const id of [5,7,4,3,2,1,6,8,9,10,11,12]){const state=initialState();state.stage=1;state.pending=id;const w=setup({state}),d=w.document,dialog=d.querySelector('dialog[open]');assert.ok(dialog);assert.ok(d.querySelector('#demo'));assert.equal(dialog.querySelectorAll('.reference-card').length,id===5?4:id===7||id===4||id===3?3:id===2||id===1||id===12?2:id===6||id===8||id===9||id===10||id===11?1:0);d.querySelector('#continue').click();assert.equal(JSON.parse(w.localStorage.getItem('ear-training-v1')).pending,null);assert.equal(JSON.parse(w.localStorage.getItem('ear-training-v1')).stage,1);await w.happyDOM.close();}
+});
+
+test('guided reference library and drawer expose only unlocked intervals at every stage',async()=>{
+ const {INTERVALS}=await import('../src/logic.js');
+ for(let stage=0;stage<STAGES.length;stage++){const state=initialState();state.stage=stage;const w=setup({state}),d=w.document;
+ assert.match(d.querySelector('#my-references').textContent,/רפרנסים מוזיקליים/);d.querySelector('#my-references').click();
+ for(const scope of ['#reference-library','#reference-drawer']){const groups=[...d.querySelectorAll(scope+' .reference-group')].map(g=>g.getAttribute('aria-label'));assert.deepEqual(groups.sort(),STAGES[stage].map(i=>INTERVALS[i]).sort());}
+ assert.match(d.querySelector('#reference-drawer-title').textContent,/רפרנסים מוזיקליים/);assert.equal(JSON.parse(w.localStorage.getItem('ear-training-v1')).stage,stage);await w.happyDOM.close();}
 });
