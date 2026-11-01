@@ -46,6 +46,6 @@ test('guided reference library and drawer expose only unlocked intervals at ever
  const {INTERVALS}=await import('../src/logic.js');
  for(let stage=0;stage<STAGES.length;stage++){const state=initialState();state.stage=stage;const w=setup({state}),d=w.document;
  assert.match(d.querySelector('#my-references').textContent,/רפרנסים מוזיקליים/);d.querySelector('#my-references').click();
- for(const scope of ['#reference-library','#reference-drawer']){const groups=[...d.querySelectorAll(scope+' .reference-group')].map(g=>g.getAttribute('aria-label'));assert.deepEqual(groups.sort(),STAGES[stage].map(i=>INTERVALS[i]).sort());}
+ for(const scope of ['#reference-library','#reference-drawer']){const groups=[...d.querySelectorAll(scope+' .reference-group')].map(g=>g.getAttribute('aria-label'));assert.deepEqual(groups,[...STAGES[stage]].sort((a,b)=>a-b).map(i=>INTERVALS[i]));}
  assert.match(d.querySelector('#reference-drawer-title').textContent,/רפרנסים מוזיקליים/);assert.equal(JSON.parse(w.localStorage.getItem('ear-training-v1')).stage,stage);await w.happyDOM.close();}
 });
