@@ -216,7 +216,7 @@ test('production singing shows one exercise, persists chromatic settings and lea
  const saved=s.w.localStorage.getItem('ear-training-singing-v1');assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');
  const again=await setup({production:true,singingSaved:saved,singingProgress:finishedSinging,pairProgress:finishedPairs}),a=again.w.document;
  assert.equal(a.querySelector('#timed-exercise').hidden,false);assert.equal(a.querySelector('#target-select').value,'49');assert.equal(a.querySelector('#timed-root').value,'55');assert.equal(a.querySelector('#timed-direction').value,'descending');assert.equal(again.requests,0);
- a.querySelector('#next-exercise').click();assert.equal(a.querySelector('#warmup-exercise').hidden,false);assert.equal(a.querySelector('#next-exercise').hidden,true);a.querySelector('#previous-exercise').click();assert.equal(a.querySelector('#timed-exercise').hidden,false);
+ a.querySelector('#next-exercise').click();assert.equal(a.querySelector('#warmup-exercise').hidden,false);assert.equal(a.querySelector('#next-exercise').hidden,false);a.querySelector('#previous-exercise').click();assert.equal(a.querySelector('#timed-exercise').hidden,false);
  await s.w.happyDOM.close();await again.w.happyDOM.close();
 });
 test('production exercise changes and exit stop microphone and pending single-note playback',async()=>{
@@ -414,3 +414,5 @@ test('free single-note success dialog advances with audio and preserves guided p
  assert.notEqual(d.querySelector('#target-select').value,old);assert.equal(s.played.length,played+1);assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(s.w.localStorage.getItem(PROGRESS_KEY),saved);
  await s.w.happyDOM.close();
 });
+
+test('melody is fourth singing step with isolated embedded view and navigation',async()=>{const s=await setup({production:true}),d=s.w.document;assert.equal(d.querySelectorAll('[data-exercise]').length,4);assert.equal(d.querySelector('#melody-frame').getAttribute('src'),null);const before=s.w.localStorage.getItem(PROGRESS_KEY);d.querySelector('[data-exercise="melody"]').click();assert.equal(d.querySelector('#melody-exercise').hidden,false);assert.equal(d.querySelector('#single-exercise').hidden,true);assert.match(d.querySelector('#melody-frame').src,/melody-lab/);assert.equal(d.querySelector('#next-exercise').hidden,true);assert.equal(s.requests,0);assert.equal(s.w.localStorage.getItem(PROGRESS_KEY),before);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');d.querySelector('[data-exercise="single"]').click();assert.equal(d.querySelector('#melody-exercise').hidden,true);await s.w.happyDOM.close();});

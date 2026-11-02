@@ -8,7 +8,7 @@ import {WARMUP_TIMING} from '../sing-back/timeline.js?v=all-singing40-12';
 
 export const SINGING_KEY='ear-training-singing-v1';
 export function createSingingExperience(env=window){
- const doc=env.document,$=id=>doc.getElementById(id),ids=['single','timed','warmup'];
+ const doc=env.document,$=id=>doc.getElementById(id),ids=['single','timed','warmup','melody'];
  let storage;try{storage=env.localStorage;}catch{}
  let saved={};try{saved=JSON.parse(storage?.getItem(SINGING_KEY)||'{}')||{};}catch{}
  let mode=saved.mode==='free'?'free':'guided';
@@ -18,7 +18,7 @@ export function createSingingExperience(env=window){
  let freePair=saved.freePair;
  if(!Number.isInteger(freePair?.root)||freePair.root<48||freePair.root>58||!['ascending','descending'].includes(freePair?.direction))freePair={root:48,direction:'ascending'};
  const guided=()=>mode==='guided';
- const accessible=id=>!guided()||id==='single'||progress.completed===10&&(id!=='warmup'||pairProgress.completed===4);
+ const accessible=id=>!guided()||id==='single'||id==='melody'||progress.completed===10&&(id!=='warmup'||pairProgress.completed===4);
  const patternIndex=()=>guided()?warmupProgress.current:freePattern;
  const patternAvailable=index=>index>=0&&index<5&&(!guided()||canOpenWarmup(warmupProgress,index));
  let warmupPattern=WARMUP_PATTERNS[patternIndex()],warmupBusy=false,pairBusy=false;
@@ -93,9 +93,10 @@ export function createSingingExperience(env=window){
  controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,tolerance:warmupPattern.tolerance??40,slotMs:warmupPattern.slotMs??WARMUP_TIMING.slotMs,demoMs:warmupPattern.offsets.length*(warmupPattern.slotMs??WARMUP_TIMING.slotMs)+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
  function show(id,focus=false,stop=true){
   if(!ids.includes(id)||!accessible(id))return;if(stop)stopAll();current=id;
+  if(id==='melody'){const frame=$('melody-frame');if(!frame.getAttribute('src'))frame.src=frame.dataset.src;}else $('melody-frame').contentWindow?.postMessage({type:'melody-stop'},env.location.origin);
   for(const name of ids)$(name+'-exercise').hidden=name!==id;
   doc.querySelectorAll('[data-exercise]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.exercise===id)));
-  $('previous-exercise').hidden=id==='single';$('next-exercise').hidden=id==='warmup';
+  $('previous-exercise').hidden=id==='single';$('next-exercise').hidden=id==='melody';
   if(focus){const heading=doc.querySelector('#'+id+'-exercise h2');heading.tabIndex=-1;heading.focus({preventScroll:true});}
   if(guided())guidedExercise=id;else freeExercise=id;updateProgress();save();resize();
  }
@@ -140,7 +141,8 @@ export function createSingingExperience(env=window){
  });
  $('target-select').addEventListener('change',()=>{if(guided())return;freeNote=Number($('target-select').value);controllers[0].setTarget(freeNote);save();});
  ['timed-root','timed-direction'].forEach(id=>$(id).addEventListener('change',()=>{if(!guided())freePair={root:Number($('timed-root').value),direction:$('timed-direction').value};save();}));
- env.addEventListener('singing-stop',stopAll);env.addEventListener('pagehide',stopAll);env.addEventListener('resize',resize);
+ env.addEventListener('message',event=>{const frame=$('melody-frame');if(event.origin===env.location.origin&&event.source===frame.contentWindow&&event.data?.type==='melody-height'&&Number.isFinite(event.data.height)){frame.style.height=Math.max(400,Math.min(20000,event.data.height))+'px';resize();}});
+ env.addEventListener('singing-stop',()=>{stopAll();$('melody-frame').contentWindow?.postMessage({type:'melody-stop'},env.location.origin);});env.addEventListener('pagehide',stopAll);env.addEventListener('resize',resize);
  const observer=env.ResizeObserver?new env.ResizeObserver(resize):null;observer?.observe(doc.body);env.addEventListener('pagehide',()=>observer?.disconnect());
  if(new URLSearchParams(env.location.search).get('embedded')==='1')doc.body.classList.add('embedded');
  persist(PROGRESS_KEY,progress);persist(PAIR_KEY,pairProgress);persist(WARMUP_KEY,warmupProgress);applyMode();show(current,false,false);

@@ -6,3 +6,5 @@ main{max-width:1080px;margin:auto;padding:20px}header{padding:18px;display:block
 .short-phrases{direction:ltr}.short-phrases>section{direction:rtl}
 
 .part-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.part-tabs button{flex:1;min-height:48px}.part-tabs button[aria-pressed=true]{background:#244f3e;color:white;font-weight:bold}
+
+body.embedded{background:transparent}body.embedded header,body.embedded footer,body.embedded main>h1{display:none}body.embedded main{padding:12px 0;max-width:none}body.embedded .cards .panel{margin:0}body.embedded .cards{padding:4px}

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-melodies.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node tests/logic.test.js && node tests/session.test.js && node tests/audio.test.js && node tests/singing.test.js && node tests/chords.test.js && node tests/bass.test.js && node tests/progression.test.js && node tests/songs.test.js && node tests/song-player.test.js && node tests/youtube-player.test.js && node tests/references.test.js && node tests/references-audio.test.js",
     "standalone": "npm run build && node scripts/standalone.mjs",
