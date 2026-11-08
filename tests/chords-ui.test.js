@@ -38,3 +38,9 @@ test('guided chord unlock is shown, saved in summary, and survives new session',
  await hear(w);choose(w,current(w).interval);assert.match(d.querySelector('dialog').textContent,/מוקטן/);assert.equal(JSON.parse(w.localStorage.getItem(CHORD_KEY)).stage,1);assert.deepEqual(session(w).unlocked,[3]);
  d.querySelector('#chord-demo').click();await flush();d.querySelector('#chord-continue').click();d.querySelector('#chord-end').click();assert.match(d.querySelector('.summary-unlocks').textContent,/מוקטן/);d.querySelector('#chord-new').click();assert.equal(JSON.parse(w.localStorage.getItem(CHORD_KEY)).stage,1);await w.happyDOM.close();
 });
+
+test('chord piano range uses same compact selector and responds to change in both modes',async()=>{
+ for(const mode of ['guided','free']){const state=chordInitial();state.mode=mode;state.stage=2;const prior=JSON.stringify({...initialState(),stage:3});const w=setup({[CHORD_KEY]:JSON.stringify(state),'ear-training-v1':prior}),d=w.document;
+ for(const [range,lo,hi,label]of [['low',48,72,'C3–C5'],['middle',60,84,'C4–C6'],['high',72,96,'C5–C7']]){const select=d.querySelector('#chord-range');assert.ok(select.closest('.range-setting'));select.value=range;select.dispatchEvent(new w.Event('change',{bubbles:true}));const saved=JSON.parse(w.localStorage.getItem(CHORD_KEY));assert.equal(saved.range,range);assert.equal(saved.stage,2);assert.equal(d.querySelector('#chord-range-position').textContent,label);assert.ok(current(w).notes.every(n=>n>=lo&&n<=hi));assert.equal(d.querySelectorAll('.correct').length,0);assert.equal(w.localStorage.getItem('ear-training-v1'),prior);await hear(w);await hear(w,true);}
+ const saved=JSON.stringify(JSON.parse(w.localStorage.getItem(CHORD_KEY)));await w.happyDOM.close();const reloaded=setup({[CHORD_KEY]:saved});assert.equal(reloaded.document.querySelector('#chord-range').value,'high');await reloaded.happyDOM.close();}
+});
