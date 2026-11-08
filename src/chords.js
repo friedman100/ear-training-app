@@ -1,5 +1,5 @@
 // Quality IDs are stable storage identifiers. Semitone formulas are root-position voicings.
-import {answer} from './logic.js';
+import {answer,RANGES} from './logic.js';
 import {newSession,loadSession,completeQuestion,noteUnlocks} from './session.js';
 export {answer,newSession,completeQuestion,noteUnlocks};
 export const CHORD_KEY='ear-training-chords-v1';
@@ -21,14 +21,15 @@ export const CHORDS=[null,
 ];
 export const CHORD_STAGES=Array.from({length:12},(_,i)=>Array.from({length:i+2},(_,j)=>j+1));
 export const chordWindow=stage=>Math.max(20,CHORD_STAGES[stage].length*4);
-export const chordInitial=()=>({version:1,stage:0,history:[],complete:false,pending:null,mode:'guided',selected:[1,2]});
+export const chordInitial=()=>({version:1,stage:0,history:[],complete:false,pending:null,mode:'guided',range:'middle',selected:[1,2]});
 export const chordActive=s=>s.mode==='guided'?CHORD_STAGES[s.stage]:s.selected;
-export function chordQuestion(active,history=[],rng=Math.random){
+export function chordQuestion(active,history=[],rng=Math.random,range=null){
  if(!active.length||active.some(id=>!CHORDS[id]))throw Error('Choose a chord quality');
  const counts=active.map(id=>history.filter(row=>row.interval===id).length),minimum=Math.min(...counts);
  const pool=active.filter((_,i)=>counts[i]===minimum),interval=pool[Math.floor(rng()*pool.length)];
  // C3–B4 roots; every complete chord fits in the existing C3–C7 sample bank.
- const root=48+Math.floor(rng()*24);
+ const [low,high]=RANGES[range]??RANGES.middle;
+ const root=range===null?48+Math.floor(rng()*24):low+Math.floor(rng()*(high-low-Math.max(...CHORDS[interval].tones)+1));
  return {interval,root,notes:CHORDS[interval].tones.map(n=>root+n),attempts:0,solved:false};
 }
 export function recordChord(state,q,correct){
@@ -45,11 +46,11 @@ export function recordChord(state,q,correct){
 export function loadChords(storage){
  try{const s=JSON.parse(storage.getItem(CHORD_KEY));
  if(!s||s.version!==1||!Number.isInteger(s.stage)||s.stage<0||s.stage>11||!['guided','free'].includes(s.mode)||!Array.isArray(s.selected)||!s.selected.length||s.selected.some(id=>!Number.isInteger(id)||!CHORDS[id])||!Array.isArray(s.history)||s.history.some(row=>!CHORDS[row.interval]||typeof row.correct!=='boolean')||typeof s.complete!=='boolean'||!(s.pending===null||s.pending==='complete'||Number.isInteger(s.pending)&&CHORDS[s.pending]))return chordInitial();
- return {...chordInitial(),...s};}catch{return chordInitial();}
+ return {...chordInitial(),...s,range:RANGES[s.range]?s.range:'middle'};}catch{return chordInitial();}
 }
 export const loadChordSession=storage=>loadSession(storage,CHORD_SESSION_KEY,13);
 export function restoreChord(current,state){
  const q=current?.q;
- if(current?.mode!==state.mode||!q||!chordActive(state).includes(q.interval)||!Number.isInteger(q.root)||q.root<48||q.root>71||!Array.isArray(q.notes)||JSON.stringify(q.notes)!==JSON.stringify(CHORDS[q.interval].tones.map(n=>q.root+n))||!Number.isInteger(q.attempts)||q.attempts<0||typeof q.solved!=='boolean'||q.solved&&q.attempts<1)return null;
+ if(current?.mode!==state.mode||!q||!chordActive(state).includes(q.interval)||!Number.isInteger(q.root)||q.root<(RANGES[state.range]??RANGES.middle)[0]||q.root+Math.max(...CHORDS[q.interval].tones)>(RANGES[state.range]??RANGES.middle)[1]||!Array.isArray(q.notes)||JSON.stringify(q.notes)!==JSON.stringify(CHORDS[q.interval].tones.map(n=>q.root+n))||!Number.isInteger(q.attempts)||q.attempts<0||typeof q.solved!=='boolean'||q.solved&&q.attempts<1)return null;
  return {...q};
 }

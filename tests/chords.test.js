@@ -35,3 +35,8 @@ test('completion, retries, session restore, and chord saves remain independent o
  assert.equal(load(storage).stage,3);assert.equal(loadChords(storage).stage,0);assert.deepEqual(loadChordSession(storage),session);
  const s=chordInitial();assert.deepEqual(restoreChord({q,mode:'guided'},s),q);assert.equal(restoreChord({q:{...q,notes:[60,65,69]},mode:'guided'},s),null);
 });
+
+test('each complete chord stays inside chosen piano range and range loading preserves progress',()=>{
+ for(const [range,lo,hi]of [['low',48,72],['middle',60,84],['high',72,96]])for(let id=1;id<=13;id++)for(const r of [0,.5,.99999]){const q=chordQuestion([id],[],()=>r,range);assert.ok(q.notes.every(n=>n>=lo&&n<=hi));assert.deepEqual(q.notes.map(n=>n-q.root),CHORDS[id].tones);}
+ const s=chordInitial();s.stage=3;s.range='high';const loaded=loadChords({getItem:()=>JSON.stringify(s)});assert.equal(loaded.stage,3);assert.equal(loaded.range,'high');delete s.range;assert.equal(loadChords({getItem:()=>JSON.stringify(s)}).stage,3);
+});
