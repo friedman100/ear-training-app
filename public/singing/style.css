@@ -18,3 +18,47 @@ main{max-width:960px;padding-top:24px}.intro{margin:25px 0 20px}.intro h1{font-s
 #melody-exercise>h2{font-size:24px;margin:16px 0 0}#melody-frame{display:block}.exercise-tabs{flex-wrap:wrap}.exercise-tabs button{flex:1 1 160px}
 
 #single-exercise .gauge,#single-exercise .gauge-labels,#single-exercise .hold-track,#single-exercise .hold-label,#single-exercise #success{display:none!important}.single-chart-wrap{max-width:760px;margin:12px auto}.single-chart-wrap svg{display:block;width:100%;background:#fafcf7;border:1px solid #dae4d2;border-radius:14px;direction:ltr}.single-chart-wrap text{font:14px Arial;fill:#62775a}.single-chart-wrap p{font-size:15px;text-align:center}#single-exercise .feedback{padding-top:12px}#single-exercise #hint{font-size:14px}
+
+/* Keep the live graph beside the controls rather than below a tall stack. */
+.single-workspace{display:grid;grid-template-columns:240px minmax(0,1fr);gap:24px;align-items:start}
+.single-controls{background:#f8faf5;border:1px solid #e1e8d9;border-radius:12px;padding:16px;min-width:0}
+#single-exercise{padding:20px 24px}
+#single-exercise h2{margin-bottom:12px}
+#single-exercise .singing-progress{margin-bottom:14px}
+#single-exercise .singing-progress-track{margin:6px 0}
+#single-exercise .singing-progress p{margin:4px 0}
+#single-exercise .target{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:4px 10px}
+#single-exercise .target>span{flex-basis:100%}
+#single-exercise .target strong{font-size:30px}
+#single-exercise .target small{display:inline}
+#single-exercise .note-picker{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+#single-exercise .note-picker select{width:100%;max-width:100%;min-width:0}
+#single-exercise .actions{display:grid;gap:8px;margin:12px 0}
+#single-exercise button{min-height:44px;padding:8px 12px}
+#single-exercise .mic-controls{display:flex;flex-direction:column;gap:4px;margin:12px 0 0}
+#single-exercise .mic-controls button{width:100%}
+#single-exercise .retry{margin-top:12px;width:100%}
+#single-exercise .feedback{padding:0;min-width:0}
+#single-exercise #feedback-label{font-size:18px;min-height:30px;margin:0 0 6px}
+#single-exercise .single-chart-wrap{margin:0}
+#single-exercise .single-chart-wrap p{font-size:13px;margin:6px 0}
+#single-exercise #hint{margin:4px 0;font-size:12px;min-height:0}
+@media(max-width:700px){
+ #single-exercise{padding:14px 12px}
+ .single-workspace{grid-template-columns:minmax(0,1fr);gap:10px}
+ .single-controls{padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}
+ #single-exercise .target>span{font-size:11px}
+ #single-exercise .target strong{font-size:26px}
+ #single-exercise .note-picker{margin:0;font-size:12px}
+ #single-exercise .actions{display:flex;grid-column:1/-1;margin:0;gap:8px}
+ #single-exercise .actions button{flex:1;font-size:14px}
+ #single-exercise .mic-controls{margin:0;gap:2px}
+ #single-exercise .mic-controls button{font-size:13px}
+ #single-exercise .retry{margin:0;font-size:12px}
+ #single-exercise #error{grid-column:1/-1;margin:0}
+ #single-exercise .single-chart-wrap svg{max-height:260px}
+ #single-exercise h2{font-size:20px;margin-bottom:8px}
+ #single-exercise .singing-progress strong{font-size:15px}
+ #single-exercise .singing-progress p{font-size:12px}
+}
+@media(min-width:701px){#single-exercise .single-chart-wrap svg{height:clamp(240px,36vh,320px)}}
