@@ -27,7 +27,7 @@ test('every guided stage needs full balanced window and 80 percent, ending safel
  const free={...s,mode:'free'};assert.deepEqual(recordChord(free,{interval:13},true),free);
 });
 test('completion, retries, session restore, and chord saves remain independent of intervals',()=>{
- let q=chordQuestion([2]),session=newSession();assert.equal(completeQuestion(session,q),session);
+ let q=chordQuestion([2],[],()=>.5,'middle'),session=newSession();assert.equal(completeQuestion(session,q),session);
  q=answer(q,1).q;q=answer(q,2).q;session=completeQuestion(session,q);assert.equal(session.total,1);assert.equal(session.correct,0);assert.equal(session.best,0);
  session=completeQuestion(session,answer(chordQuestion([13]),13).q);assert.equal(session.total,2);assert.equal(session.correct,1);assert.deepEqual(session.intervals[13],{total:1,correct:1});
  const intervalState=initialState();intervalState.stage=3;
