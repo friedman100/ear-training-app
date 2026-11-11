@@ -2,7 +2,7 @@ import {WARMUP_TIMING} from './timeline.js?v=all-singing40-12';
 import {createTimedPair} from './timed-pair.js?v=all-singing40-12';
 import {detectPitch,createTracker} from './pitch.js?v=all-singing40-12';
 
-export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false,freezeOnSuccess=false}={}){
+export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false,freezeOnSuccess=false,continuous=false,onReading=()=>{},onReset=()=>{}}={}){
  const doc=env.document,$=id=>doc.getElementById(prefix+id);
  const targets=Array.from({length:pair?11:13},(_,i)=>48+i);
  const letters=['C','C♯ / D♭','D','D♯ / E♭','E','F','F♯ / G♭','G','G♯ / A♭','A','A♯ / B♭','B'];
@@ -20,10 +20,10 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  const now=()=>env.performance.now();
  function audioContext(){const Audio=env.AudioContext||env.webkitAudioContext;if(!Audio)throw new Error('unsupported');context??=new Audio();return context;}
  function label(text){if(lastLabel!==text){$('feedback-label').textContent=text;lastLabel=text;}}
- function clearReading(text='מקשיב...'){$('needle').hidden=true;$('hold').style.width='0%';$('meter').setAttribute('aria-valuetext',text);$('hint').textContent=micActive?'שירו צליל יציב ונוח. גם אוקטבה אחרת מתאימה.':'כשתשירו, המחוון יראה לאן לכוון את הקול.';label(text);}
+ function clearReading(text='מקשיב...'){onReading(null,now());$('needle').hidden=true;$('hold').style.width='0%';$('meter').setAttribute('aria-valuetext',text);$('hint').textContent=micActive?'שירו צליל יציב ונוח. גם אוקטבה אחרת מתאימה.':'כשתשירו, המחוון יראה לאן לכוון את הקול.';label(text);}
  function showTarget(){const n=current();$('target-name').textContent=name(n)[0];$('target-hebrew').textContent=name(n)[1];if(pair)$('steps').innerHTML=sequence().map((midi,i)=>`<div class="pair-note ${i<step?'done':i===step?'active':''}"><small>${i<step?'✓':'צליל '+(i+1)}</small><strong dir="ltr">${name(midi)[0]}</strong></div>`).join('');}
- function reset(){step=0;showTarget();tracker.reset();successShown=false;$('success').hidden=true;clearReading(micActive?'מקשיב...':'הקשיבו לצליל ואז הפעילו את המיקרופון');}
- function paint(result){
+ function reset(){step=0;showTarget();onReset();tracker.reset();successShown=false;$('success').hidden=true;clearReading(micActive?'מקשיב...':'הקשיבו לצליל ואז הפעילו את המיקרופון');}
+ function paint(result){onReading(result,now());
  if(!result.reliable){clearReading();return;}
  const cents=result.cents,clamped=Math.max(-100,Math.min(100,cents));
  $('needle').hidden=false;$('needle').style.left=`${50+clamped/2}%`;
@@ -32,7 +32,7 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
  $('meter').setAttribute('aria-valuetext',state);label(state);
  $('hint').textContent=Math.abs(cents)<=40?'אתם באזור הנכון. הישארו על הצליל רגע.':cents>0?'נסו להוריד מעט את הקול.':'נסו להעלות מעט את הקול.';
  $('hold').style.width=`${result.progress*100}%`;
- if(result.success&&!successShown){if(pair&&step===0){step=1;tracker.reset();showTarget();clearReading('מצוין! עכשיו שירו את הצליל השני');return;}successShown=true;$('success').hidden=false;onSuccess(current());if(pair){$('steps').querySelectorAll('.pair-note').forEach(n=>{n.classList.remove('active');n.classList.add('done');});}}
+ if(result.success&&!successShown){if(pair&&step===0){step=1;tracker.reset();showTarget();clearReading('מצוין! עכשיו שירו את הצליל השני');return;}successShown=true;$('success').hidden=continuous;onSuccess(current());if(pair){$('steps').querySelectorAll('.pair-note').forEach(n=>{n.classList.remove('active');n.classList.add('done');});}}
  }
  function frame(time){
  if(!micActive)return;

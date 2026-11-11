@@ -1,8 +1,9 @@
+import {createSingleChart} from './single-chart.js?v=single-chart-16';
 import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from './warmup-progression.js?v=singing-modes-6';
 import {WARMUP_PATTERNS} from './warmup-patterns.js?v=all-singing40-12';
 import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-modes-6';
 import {PROGRESS_KEY,loadProgress,completeTarget,nextTarget,solved} from './progression.js?v=singing-modes-6';
-import {createPrototype} from '../sing-back/app.js?v=single-success-14';
+import {createPrototype} from '../sing-back/app.js?v=single-chart-16';
 import {createTimedPair} from '../sing-back/timed-pair.js?v=all-singing40-12';
 import {WARMUP_TIMING} from '../sing-back/timeline.js?v=all-singing40-12';
 
@@ -41,6 +42,7 @@ export function createSingingExperience(env=window){
   doc.querySelectorAll('[data-exercise]').forEach(button=>{const unavailable=!accessible(button.dataset.exercise);button.disabled=unavailable;button.setAttribute('aria-disabled',String(unavailable));button.querySelector('small')?.remove();if(unavailable){const hint=doc.createElement('small');hint.textContent='בהמשך המסלול';button.append(hint);}});
   const next=ids[ids.indexOf(current)+1];$('next-exercise').disabled=!!next&&!accessible(next);
  }
+ const singleChart=createSingleChart(doc);
  const singleDialog=doc.createElement('dialog');singleDialog.id='single-success-dialog';singleDialog.className='single-success-dialog';
  singleDialog.setAttribute('aria-labelledby','single-success-title');singleDialog.setAttribute('aria-describedby','single-success-detail');
  singleDialog.innerHTML='<span class="success-check" aria-hidden="true">✓</span><h2 id="single-success-title">כל הכבוד, שרתם נכון!</h2><p id="single-success-detail"></p><button id="single-success-next" class="primary">לתו הבא ←</button><button id="single-success-close" class="secondary">להישאר בתו הזה</button>';
@@ -51,10 +53,7 @@ export function createSingingExperience(env=window){
  function onSingleSuccess(note){
   if(current!=='single')return;
   if(guided()){const updated=completeTarget(progress,note);if(updated!==progress){progress=updated;persist(PROGRESS_KEY,progress);updateProgress();}}
-  const finished=guided()&&progress.completed===10;
-  $('single-success-detail').textContent=finished?'השלמתם את כל 10 הצלילים! עכשיו אפשר לעבור לשני צלילים.':'עכשיו עוברים לתו הבא. מוכנים?';
-  $('single-success-next').textContent=finished?'לשלב הבא — שני צלילים ←':'לתו הבא ←';
-  resize();if(!singleDialog.open)singleDialog.showModal();$('single-success-next').focus();singleDialog.scrollIntoView?.({block:'center'});
+  resize();
  }
  function updatePairProgress(){
   const count=pairProgress.completed,q=pairProgress.questions[pairProgress.index];
@@ -88,7 +87,7 @@ export function createSingingExperience(env=window){
   if(env.setTimeout)env.setTimeout(reveal,150);else reveal();
  }
  const controllers=[],stopAll=()=>{closeSingleSuccess();controllers.forEach(controller=>controller.stop());};
- controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true,freezeOnSuccess:true}));
+ controllers.push(createPrototype(env,{onMicStart:stopAll,onSuccess:onSingleSuccess,managedTargets:true,requirePlayback:true,continuous:true,onReading:singleChart.update,onReset:singleChart.reset}));
  controllers.push(createTimedPair(env,{onSuccess:onPairSuccess,onBusyChange:value=>{pairBusy=value;updatePairProgress();},onActivate:()=>{controllers[0].stop();controllers[2]?.stop();}}));
  controllers.push(createTimedPair(env,{prefix:'warmup-',pattern:warmupPattern.offsets,...WARMUP_TIMING,tolerance:warmupPattern.tolerance??40,slotMs:warmupPattern.slotMs??WARMUP_TIMING.slotMs,demoMs:warmupPattern.offsets.length*(warmupPattern.slotMs??WARMUP_TIMING.slotMs)+400,onSuccess:onWarmupSuccess,onBusyChange:value=>{warmupBusy=value;updateWarmupProgress();},onActivate:()=>{controllers[0].stop();controllers[1].stop();}}));
  function show(id,focus=false,stop=true){
