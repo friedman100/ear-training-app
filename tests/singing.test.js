@@ -423,7 +423,7 @@ test('single chart zoom waits, eases, preserves tolerance and freezes in silence
  step(500,1000);assert.ok(range()>300&&range()<400);
  for(let t=1050;t<=4000;t+=50)step(500,t);assert.ok(range()>690);assert.match(d.getElementById('single-chart-direction').textContent,/רדו/);
  const before=range();for(let t=4050;t<=6000;t+=50)step(null,t);assert.equal(range(),before);
- for(let t=6050;t<8050;t+=50)step(-20,t);assert.equal(range(),before);
+ for(let t=6050;t<8050;t+=50)step(-20,t);assert.ok(range()>=before);assert.equal(d.getElementById('single-chart-scale').textContent,'תצוגה רחבה — חזרו לכיוון האזור הירוק');
  for(let t=8050;t<=11000;t+=50)step(-20,t);assert.ok(range()<301);
  step(-300,11050);assert.match(d.getElementById('single-chart-direction').textContent,/עלו/);
  const band=d.getElementById('single-chart-band');assert.ok(Math.abs(Number(band.getAttribute('height'))-9600/range())<.01);
