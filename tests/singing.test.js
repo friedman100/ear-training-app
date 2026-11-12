@@ -413,3 +413,19 @@ test('free single-note chart keeps listening beyond success without a popup and 
 });
 
 test('melody is fourth singing step with isolated embedded view and navigation',async()=>{const s=await setup({production:true}),d=s.w.document;assert.equal(d.querySelectorAll('[data-exercise]').length,4);assert.equal(d.querySelector('#melody-frame').getAttribute('src'),null);const before=s.w.localStorage.getItem(PROGRESS_KEY);d.querySelector('[data-exercise="melody"]').click();assert.equal(d.querySelector('#melody-exercise').hidden,false);assert.equal(d.querySelector('#single-exercise').hidden,true);assert.match(d.querySelector('#melody-frame').src,/melody-lab/);assert.equal(d.querySelector('#next-exercise').hidden,true);assert.equal(s.requests,0);assert.equal(s.w.localStorage.getItem(PROGRESS_KEY),before);assert.equal(s.w.localStorage.getItem('ear-training-v1'),'existing-interval-progress');d.querySelector('[data-exercise="single"]').click();assert.equal(d.querySelector('#melody-exercise').hidden,true);await s.w.happyDOM.close();});
+
+test('single chart zoom waits, eases, preserves tolerance and freezes in silence',async()=>{
+ const {createSingleChart}=await import('../public/singing/single-chart.js');
+ const w=new Window();w.document.body.innerHTML=await readFile(new URL('../public/singing/index.html',import.meta.url),'utf8');
+ const d=w.document,c=createSingleChart(d),range=()=>Number(d.getElementById('single-pitch-chart').getAttribute('data-range-cents'));
+ const step=(cents,t)=>c.update(cents===null?null:{reliable:true,cents},t);
+ c.reset();for(let t=0;t<1000;t+=50)step(500,t);assert.equal(range(),300);
+ step(500,1000);assert.ok(range()>300&&range()<400);
+ for(let t=1050;t<=4000;t+=50)step(500,t);assert.ok(range()>690);assert.match(d.getElementById('single-chart-direction').textContent,/רדו/);
+ const before=range();for(let t=4050;t<=6000;t+=50)step(null,t);assert.equal(range(),before);
+ for(let t=6050;t<8050;t+=50)step(-20,t);assert.equal(range(),before);
+ for(let t=8050;t<=11000;t+=50)step(-20,t);assert.ok(range()<301);
+ step(-300,11050);assert.match(d.getElementById('single-chart-direction').textContent,/עלו/);
+ const band=d.getElementById('single-chart-band');assert.ok(Math.abs(Number(band.getAttribute('height'))-9600/range())<.01);
+ c.reset();assert.equal(range(),300);assert.equal(d.getElementById('single-pitch-trace').getAttribute('d'),'');w.happyDOM.abort();
+});

@@ -62,3 +62,4 @@ main{max-width:960px;padding-top:24px}.intro{margin:25px 0 20px}.intro h1{font-s
  #single-exercise .singing-progress p{font-size:12px}
 }
 @media(min-width:701px){#single-exercise .single-chart-wrap svg{height:clamp(240px,36vh,320px)}}
+#single-exercise #single-chart-direction{font-size:17px;font-weight:700;color:#315d3f;margin:0 0 6px;min-height:28px}#single-exercise #single-chart-scale{font-size:12px;margin:3px 0;color:#62775a}

@@ -1,4 +1,4 @@
-import {createSingleChart} from './single-chart.js?v=single-chart-16';
+import {createSingleChart} from './single-chart.js?v=adaptive-chart-18';
 import {WARMUP_KEY,loadWarmupProgress,canOpenWarmup,completeWarmup} from './warmup-progression.js?v=singing-modes-6';
 import {WARMUP_PATTERNS} from './warmup-patterns.js?v=all-singing40-12';
 import {PAIR_KEY,loadPairProgress,completePair,nextPair} from './pair-progression.js?v=singing-modes-6';
