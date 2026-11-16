@@ -260,3 +260,17 @@ test('main web link opens singing first without losing interval progress or a co
  const returning=setup(saved,true,session,true),r=returning.document;assert.ok(r.querySelector('#singing-frame'));assert.equal(returning.localStorage.getItem('ear-training-v1'),saved);assert.equal(returning.localStorage.getItem('ear-training-session-v1'),session);
  r.querySelector('[data-section="intervals"]').click();assert.ok(r.querySelector('.summary'));assert.equal(returning.playedNotes,0);await returning.happyDOM.close();
 });
+
+test('part B advances from modal and sidebar independently and persists after reload',async()=>{
+ const {initialState}=await import('../src/logic.js');
+ for(const modal of [true,false]){
+ const state={...initialState(),stage:4,partAComplete:true,pending:modal?'partB':null};
+ const w=setup(JSON.stringify(state)),d=w.document;
+ const ids=[...d.querySelectorAll('[id]')].map(e=>e.id);assert.equal(new Set(ids).size,ids.length);
+ d.querySelector(modal?'#partB-dialog':'#partB').click();
+ assert.equal(stored(w).stage,5);assert.equal(stored(w).pending,6);assert.match(d.querySelector('#unlock-title').textContent,/טריטון/);
+ d.querySelector('#continue').click();assert.equal(stored(w).pending,null);
+ const reloaded=setup(w.localStorage.getItem('ear-training-v1'));assert.equal(stored(reloaded).stage,5);assert.equal(reloaded.document.querySelector('#partB-dialog'),null);
+ await w.happyDOM.close();await reloaded.happyDOM.close();
+ }
+});
