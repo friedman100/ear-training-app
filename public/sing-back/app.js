@@ -2,7 +2,7 @@ import {WARMUP_TIMING} from './timeline.js?v=all-singing40-12';
 import {createTimedPair} from './timed-pair.js?v=all-singing40-12';
 import {detectPitch,createTracker} from './pitch.js?v=all-singing40-12';
 
-export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false,freezeOnSuccess=false,continuous=false,onReading=()=>{},onReset=()=>{}}={}){
+export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>{},onSuccess=()=>{},managedTargets=false,requirePlayback=false,freezeOnSuccess=false,continuous=false,holdMs=650,onReading=()=>{},onReset=()=>{}}={}){
  const doc=env.document,$=id=>doc.getElementById(prefix+id);
  const targets=Array.from({length:pair?11:13},(_,i)=>48+i);
  const letters=['C','C♯ / D♭','D','D♯ / E♭','E','F','F♯ / G♭','G','G♯ / A♭','A','A♯ / B♭','B'];
@@ -16,7 +16,7 @@ export function createPrototype(env=window,{prefix='',pair=false,onMicStart=()=>
 
  let target=48,context,stream,input,analyser,raf,micActive=false,pending=false,permissionId=0;
  let playing=false,blockedUntil=0,lastFrame=0,lastLabel='',successShown=false;
- const cache=new Map(),tracker=createTracker();let playbackId=0,sources=[];
+ const cache=new Map(),tracker=createTracker({holdMs});let playbackId=0,sources=[];
  const now=()=>env.performance.now();
  function audioContext(){const Audio=env.AudioContext||env.webkitAudioContext;if(!Audio)throw new Error('unsupported');context??=new Audio();return context;}
  function label(text){if(lastLabel!==text){$('feedback-label').textContent=text;lastLabel=text;}}
