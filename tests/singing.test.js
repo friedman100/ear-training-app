@@ -402,18 +402,18 @@ test('single-note default accepts 39 cents in either direction and rejects 41 ce
  }
 });
 
-test('free single-note success popup requires four seconds and advances without changing guided progress',async()=>{
+test('free single-note success popup requires three seconds and advances without changing guided progress',async()=>{
  const s=await setup({production:true}),d=s.w.document;d.querySelector('[data-singing-mode="free"]').click();const saved=s.w.localStorage.getItem(PROGRESS_KEY);
  d.querySelector('#mic').click();await flush();d.querySelector('#play').click();await flush();s.finishPiano();s.tick(400);
- for(let t=450;t<=4000;t+=50)s.tick(t);
+ for(let t=450;t<=3000;t+=50)s.tick(t);
  assert.equal(d.querySelector('#single-success-dialog').open,false);
- s.setSignal(tone(146.83));for(let t=4050;t<=4500;t+=50)s.tick(t);
- s.setSignal(tone(130.8128));for(let t=4550;t<=8400;t+=50)s.tick(t);
+ s.setSignal(tone(146.83));for(let t=3050;t<=3500;t+=50)s.tick(t);
+ s.setSignal(tone(130.8128));for(let t=3550;t<=6400;t+=50)s.tick(t);
  assert.equal(d.querySelector('#single-success-dialog').open,false);
- for(let t=8450;t<=9000;t+=50)s.tick(t);
+ for(let t=6450;t<=7000;t+=50)s.tick(t);
  assert.equal(d.querySelector('#single-success-dialog').open,true);
- assert.match(d.querySelector('#single-success-detail').textContent,/ארבע שניות/);
- s.setSignal(new Float32Array(4096));s.tick(9050);assert.match(d.querySelector('#feedback-label').textContent,/שרתם נכון/);
+ assert.match(d.querySelector('#single-success-detail').textContent,/שלוש שניות/);
+ s.setSignal(new Float32Array(4096));s.tick(7050);assert.match(d.querySelector('#feedback-label').textContent,/שרתם נכון/);
  d.querySelector('#single-success-next').click();await flush();assert.equal(d.querySelector('#single-success-dialog').open,false);assert.equal(d.querySelector('#single-pitch-trace').getAttribute('d'),'');assert.equal(s.w.localStorage.getItem(PROGRESS_KEY),saved);await s.w.happyDOM.close();
 });
 
