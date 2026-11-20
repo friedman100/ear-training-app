@@ -1,21 +1,23 @@
+import {createPitchChart} from '../shared/pitch-chart.js';
 import {COURSE_KEY,STAGES,loadCourse,completed,stageDone,pickInterval,completePair,advanceCourse} from './course.js';
 import {detectPitch} from '../../public/sing-back/pitch.js';
 import {playReferenceSequence,stop} from '../../src/audio.js';
 import {CONFIG,roots,newRoot,name,hz,createReading} from './logic.js';
 const $=id=>document.getElementById(id),reader=createReading();
 let low=60,interval=5,mode='guided',step=0,mic=false,pending=false,context,stream,input,analyser,frame,request=0,playing=false,blocked=0,lastFrame=0,trace=[],achieved=new Set(),sequenceHigh=false,permission=0,error='';
+const pitchChart=createPitchChart(document);
 let course=loadCourse(localStorage);
 const instructions=['הקשיבו לשני הצלילים יחד. נסו לתפוס ולשיר את הצליל הגבוה שאתם שומעים.','עכשיו נסו לתפוס ולשיר את הצליל הנמוך.','עכשיו נסו לשיר את הצליל הגבוה ואז את הנמוך, בלי לשמוע אותם בנפרד קודם.'];
 function saveCourse(){if(mode!=='guided')return;course.pair={low,interval,achieved:[...achieved],counted:course.pair?.counted??false};try{localStorage.setItem(COURSE_KEY,JSON.stringify(course));}catch{$('error').textContent='לא ניתן לשמור התקדמות בדפדפן הזה.';}}
 function courseUI(){$('course').hidden=mode!=='guided';$('interval').disabled=mode==='guided';const st=STAGES[course.stage],total=st.each*st.intervals.length;$('course-title').textContent=`שלב ${course.stage+1} מתוך 5 · ${st.title}`;$('course-progress').textContent=`השלמתם ${completed(course)} מתוך ${total} זוגות`;$('course-bar').max=total;$('course-bar').value=completed(course);$('course-next').hidden=!stageDone(course)||course.stage===4;}
 function restorePair(){if(mode==='guided'&&course.pair){low=course.pair.low;interval=course.pair.interval;achieved=new Set();$('focus').value='low';step=1;$('interval').value=String(interval);saveCourse();draw();}else choose();}
 $('course-next').onclick=()=>{if(advanceCourse(course)){choose();saveCourse();}};
-function reset(){if($('matched-dialog').open)$('matched-dialog').close();reader.reset();trace=[];achieved.clear();sequenceHigh=false;$('success').textContent='';$('trace').setAttribute('d','');$('voice').hidden=true;$('note').textContent='—';$('needle').hidden=true;$('hold').style.width='0%';}
+function reset(){pitchChart.reset(name($('focus').value==='high'?low+interval:low));if($('matched-dialog').open)$('matched-dialog').close();reader.reset();trace=[];achieved.clear();sequenceHigh=false;$('success').textContent='';$('trace').setAttribute('d','');$('voice').hidden=true;$('note').textContent='—';$('needle').hidden=true;$('hold').style.width='0%';}
 function cancel(){request++;stop();playing=false;blocked=0;reset();$('play-state').textContent='מוכנים להקשיב?';}
 function targets(){return [low,low+interval];}
 function y(m){const [a,b]=targets();return 300-(m-(a-5))/(b-a+10)*260;}
 function draw(){courseUI();const [a,b]=targets();$('targets').textContent=`נמוך: ${name(a)} · גבוה: ${name(b)}`;$('target-lines').innerHTML=[[a,'נמוך'],[b,'גבוה']].map(([m,label])=>`<line x1="30" x2="565" y1="${y(m)}" y2="${y(m)}" stroke="#91b46b" stroke-width="3"/><text x="560" y="${y(m)-10}" text-anchor="end">${label} · ${name(m)}</text>`).join('');$('grid').innerHTML=Array.from({length:b-a+11},(_,i)=>a-5+i).map(m=>`<line x1="30" x2="565" y1="${y(m)}" y2="${y(m)}" stroke="#e5eadd"/>`).join('');$('high').textContent='השמע את הגבוה';$('low').textContent='השמע את הנמוך';focusUI();}
-function focusUI(){const high=$('focus').value==='high';$('gauge-target').textContent=`עכשיו שרים את ה${high?'גבוה':'נמוך'}`;}
+function focusUI(){const high=$('focus').value==='high';pitchChart.reset(name(high?low+interval:low));$('gauge-target').textContent=`עכשיו שרים את ה${high?'גבוה':'נמוך'}`;}
 $('matched-next').onclick=()=>{const both=achieved.size===2;$('matched-dialog').close();if(both){if(mode==='guided'&&stageDone(course)){if(!advanceCourse(course)){ $('success').textContent='כל הכבוד! השלמתם את כל חמשת השלבים';return;}}choose();step=0;draw();}else{$('focus').value=achieved.has('high')?'low':'high';step=$('focus').value==='high'?0:1;reader.reset();focusUI();$('feedback').textContent='מקשיב…';$('needle').hidden=true;$('hold').style.width='0%';}};
 function choose(){cancel();$('focus').value='low';step=1;interval=mode==='guided'?pickInterval(course):Number($('interval').value);$('interval').value=String(interval);low=newRoot($('range').value,interval,low);if(mode==='guided')course.pair=null;saveCourse();draw();}
 async function play(kind){const kept=new Set(achieved);cancel();achieved=kept;const id=request;playing=true;blocked=Infinity;reader.reset();$('needle').hidden=true;$('hold').style.width='0%';$('play-state').textContent='מנגן — הקשיבו לפסנתר';$('feedback').textContent='בזמן הפסנתר זיהוי השירה מושהה';
@@ -25,8 +27,8 @@ async function play(kind){const kept=new Set(achieved);cancel();achieved=kept;co
 }
 function debug(reading){$('debug').textContent=`תדר: ${reading?reading.frequency.toFixed(1)+' Hz':'—'}\nתו ואוקטבה: ${reading?name(reading.midi):'—'}\nסטייה מהמטרה הקרובה: ${reading?reading.cents.toFixed(1):'—'} סנט\nאיכות הזיהוי: ${reading?reading.confidence.toFixed(3):'—'}\nמיקרופון: ${pending?'ממתין לאישור':mic?'פעיל':'כבוי'}\nתדרי המטרות: ${targets().map(n=>hz(n).toFixed(1)).join(', ')} Hz\nסף דיוק: ±${CONFIG.tolerance} סנט\nמשך יציבות: ${CONFIG.holdMs} מילישניות\nשגיאה: ${error||'אין'}`;}
 function tick(t){if(!mic)return;frame=requestAnimationFrame(tick);if($('matched-dialog').open)return;if(t-lastFrame<50)return;lastFrame=t;
- if(playing||t<blocked){reader.reset();$('voice').hidden=true;$('note').textContent='—';debug(null);return;}
- $('play-state').textContent='מקשיב לשירה';const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);const r=reader.update(detectPitch(data,context.sampleRate),low,low+interval,t,$('focus').value);debug(r);
+ if(playing||t<blocked){pitchChart.update(null,t);reader.reset();$('voice').hidden=true;$('note').textContent='—';debug(null);return;}
+ $('play-state').textContent='מקשיב לשירה';const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);const r=reader.update(detectPitch(data,context.sampleRate),low,low+interval,t,$('focus').value);debug(r);pitchChart.update(r?{...r,reliable:true}:null,t);
  if(!r){$('voice').hidden=true;$('note').textContent='—';$('needle').hidden=true;$('hold').style.width='0%';$('feedback').textContent='מקשיב…';trace.push(null);if(trace.length>100)trace.shift();return;}
  $('needle').hidden=false;$('needle').style.left=`${50+Math.max(-100,Math.min(100,r.cents))/2}%`;$('meter').setAttribute('aria-valuenow',String(Math.round(Math.max(-100,Math.min(100,r.cents)))));$('hold').style.width=`${r.progress*100}%`;$('note').textContent=name(r.midi);$('voice').hidden=false;const v=Math.max(15,Math.min(325,y(r.midi)));$('voice').querySelector('line').setAttribute('y1',v);$('voice').querySelector('line').setAttribute('y2',v);$('voice').querySelector('circle').setAttribute('cy',v);
  $('feedback').textContent=r.accurate?`אתם על הצליל ה${r.nearest==='high'?'גבוה':'נמוך'}`:r.cents>0?'גבוה מדי — נסו להוריד מעט את הקול':'נמוך מדי — נסו להעלות מעט את הקול';

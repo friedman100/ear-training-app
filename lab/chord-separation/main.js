@@ -1,11 +1,14 @@
+import {createPitchChart} from '../shared/pitch-chart.js';
 import {detectPitch} from '../../public/sing-back/pitch.js';
 import {playReferenceSequence,stop} from '../../src/audio.js';
 import {name} from '../harmonic-separation/logic.js';
 import {QUALITIES,newChord,createChordAttempt} from './logic.js';
 const $=id=>document.getElementById(id),attempt=createChordAttempt(),positions=['הנמוך','האמצעי','הגבוה'];
+const pitchChart=createPitchChart(document);let chartTarget='';
 let chord,heard=false,mic=false,pending=false,permission=0,context,stream,input,analyser,raf,lastFrame=0,playing=false,blocked=0,playId=0;
-function reading(text='מקשיב…'){$('feedback').textContent=text;$('needle').hidden=true;$('hold').style.width='0%';$('note').textContent='—';$('meter').setAttribute('aria-valuenow','0');}
+function reading(text='מקשיב…'){pitchChart.update(null,performance.now());$('feedback').textContent=text;$('needle').hidden=true;$('hold').style.width='0%';$('note').textContent='—';$('meter').setAttribute('aria-valuenow','0');}
 function draw(){
+ const key=chord.notes.join(',')+'|'+attempt.index;if(key!==chartTarget){chartTarget=key;pitchChart.reset(name(chord.notes[attempt.index]));}
  $('gauge-target').textContent=attempt.complete?'כל הכבוד! שרתם את שלושת הצלילים':`עכשיו שרים את הצליל ${positions[attempt.index]}`;
  $('chord-name').textContent=`${name(chord.notes[0])} · ${QUALITIES[chord.type].label}`;
  $('chord-steps').innerHTML=chord.notes.map((n,i)=>`<li class="${i<attempt.index||i===attempt.index&&attempt.matched?'done':i===attempt.index?'active':''}" ${i===attempt.index?'aria-current="step"':''}><span>${i+1}. ${positions[i]}</span><strong>${name(n)}</strong>${i<attempt.index||i===attempt.index&&attempt.matched?'✓':''}</li>`).join('');
@@ -24,10 +27,10 @@ function success(){draw();$('feedback').textContent='✓ שרתם נכון את 
 function tick(time){
  if(!mic)return;raf=requestAnimationFrame(tick);if(time-lastFrame<50)return;lastFrame=time;
  if($('matched-dialog').open||attempt.matched)return;
- if(playing||time<blocked){attempt.clearReading();return;}
+ if(playing||time<blocked){pitchChart.update(null,time);attempt.clearReading();return;}
  if(!heard){attempt.clearReading();reading('הקשיבו לאקורד לפני השירה');return;}
  $('play-state').textContent='מקשיב לשירה';const data=new Float32Array(analyser.fftSize);analyser.getFloatTimeDomainData(data);
- const detection=detectPitch(data,context.sampleRate),r=attempt.update(detection,chord.notes,time);
+ const detection=detectPitch(data,context.sampleRate),r=attempt.update(detection,chord.notes,time);pitchChart.update(r,time);
  if(!r?.reliable){reading();return;}
  $('needle').hidden=false;$('needle').style.left=`${50+Math.max(-100,Math.min(100,r.cents))/2}%`;$('hold').style.width=`${r.progress*100}%`;$('meter').setAttribute('aria-valuenow',String(Math.round(Math.max(-100,Math.min(100,r.cents)))));
  $('feedback').textContent=r.accurate?'מדויק — החזיקו את הצליל':r.cents>0?'גבוה מדי — רדו מעט בגובה הצליל':'נמוך מדי — עלו מעט בגובה הצליל';$('note').textContent=name(69+12*Math.log2(detection.frequency/440));if(attempt.matched)success();
@@ -44,6 +47,6 @@ $('matched-next').onclick=()=>{closeDialog();if(attempt.complete)choose();else{a
 $('matched-dialog').addEventListener('cancel',e=>{e.preventDefault();$('matched-next').click();});
 for(const kind of ['together','single','broken'])$(kind).onclick=()=>play(kind);
 $('stop-audio').onclick=()=>{cancelAudio();reading();};$('new').onclick=choose;
-$('retry').onclick=()=>{cancelAudio();closeDialog();attempt.reset();reading();draw();};
+$('retry').onclick=()=>{cancelAudio();closeDialog();attempt.reset();chartTarget='';reading();draw();};
 for(const key of ['range','quality'])$(key).onchange=choose;
 addEventListener('pagehide',()=>{cancelAudio();stopMic();});choose();
