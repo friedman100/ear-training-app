@@ -1,3 +1,5 @@
+import * as courseModule from '../lab/harmonic-separation/course.js';
+import * as labLogic from '../lab/harmonic-separation/logic.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CONFIG,roots,newRoot,hz,createReading} from '../lab/harmonic-separation/logic.js';
@@ -16,7 +18,8 @@ test('shared pitch detector measures actual waveform and rejects silence',()=>{
 });
 test('isolated built page has manual steps, all helpers, no microphone on load or progress storage',async()=>{
  const w=new Window({url:'https://lab.example/lab/harmonic-separation/'});w.document.write((await readFile('dist-lab/lab/harmonic-separation/index.html','utf8')).replace(/<script[^>]*>[\s\S]*?<\/script>/g,''));w.localStorage.setItem('ear-training-v1','preserved');w.localStorage.setItem(COURSE_KEY,JSON.stringify({...initialCourse(),pair:{low:60,interval:5,achieved:['high'],counted:false}}));
- w.eval(await readFile('dist-lab/assets/'+(await readdir('dist-lab/assets')).find(n=>n.endsWith('.js')),'utf8'));
+ Object.assign(w,courseModule,labLogic,{detectPitch,playReferenceSequence:async()=>{},stop:()=>{}});
+ w.eval((await readFile('lab/harmonic-separation/main.js','utf8')).replace(/^import .*;\n/gm,''));
  const d=w.document;assert.equal(d.querySelector('#focus').value,'low');assert.match(d.querySelector('#gauge-target').textContent,/הנמוך/);d.querySelector('#focus').value='low';d.querySelector('#retry').click();assert.equal(d.querySelector('#focus').value,'low');assert.deepEqual(JSON.parse(w.localStorage.getItem(COURSE_KEY)).pair.achieved,[]);assert.equal(d.querySelector('#mic-state').textContent,'המיקרופון כבוי');assert.equal(d.querySelector('#selection'),null);assert.equal(d.querySelector('#root'),null);assert.equal(d.querySelectorAll('#target-lines line').length,2);assert.equal(d.querySelectorAll('#interval option').length,6);
  d.querySelector('#focus').value='low';d.querySelector('#focus').dispatchEvent(new w.Event('change'));assert.match(d.querySelector('#gauge-target').textContent,/הנמוך/);d.querySelector('[data-mode="free"]').click();d.querySelector('#focus').value='low';d.querySelector('#focus').dispatchEvent(new w.Event('change'));d.querySelector('#new').click();assert.equal(d.querySelector('#focus').value,'low');assert.match(d.querySelector('#gauge-target').textContent,/הנמוך/);assert.equal(w.localStorage.getItem('ear-training-v1'),'preserved');assert.equal(w.localStorage.length,2);await w.happyDOM.close();
 });

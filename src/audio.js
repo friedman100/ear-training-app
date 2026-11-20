@@ -34,7 +34,7 @@ async function playPlan(plan,onPlaybackChange,onReady,level,{duration=NOTE_DURAT
  const notes=[...new Set(plan.map(note=>sampleMidi(note.midi)))];
  await Promise.all(notes.map(async midi=>{
  if(buffers.has(midi))return;
- const url=window.PIANO_SAMPLES?.[midi] ? `data:audio/mpeg;base64,${window.PIANO_SAMPLES[midi]}` : `${import.meta.env.BASE_URL}audio/${midi}.mp3`;
+ const url=window.PIANO_SAMPLES?.[midi] ? `data:audio/mpeg;base64,${window.PIANO_SAMPLES[midi]}` : new URL('audio/'+midi+'.mp3',new URL(/* @vite-ignore */ '../',import.meta.url)).href;
  const response=await fetch(url);
  if(!response.ok)throw new Error('Audio unavailable');
  buffers.set(midi,await context.decodeAudioData(await response.arrayBuffer()));
