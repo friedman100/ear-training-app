@@ -1,10 +1,11 @@
 import {createTracker} from '../../public/sing-back/pitch.js';
 import {newRoot} from '../harmonic-separation/logic.js';
-export const QUALITIES={major:{label:'מז׳ור · Major',offsets:[0,4,7]},minor:{label:'מינור · Minor',offsets:[0,3,7]}};
+export const QUALITIES={major:{label:'מז׳ור · Major',offsets:[0,4,7]},minor:{label:'מינור · Minor',offsets:[0,3,7]},diminished:{label:'מוקטן · Diminished',offsets:[0,3,6]},augmented:{label:'מוגדל · Augmented',offsets:[0,4,8]}};
 export function newChord(range='middle',quality='mixed',previous,random=Math.random){
- const type=quality==='mixed'?(random()<.5?'major':'minor'):quality;
+ const types=Object.keys(QUALITIES);
+ const type=quality==='mixed'?types[Math.min(types.length-1,Math.floor(random()*types.length))]:quality;
  if(!QUALITIES[type])throw new Error('Unknown chord');
- const root=newRoot(range,7,previous,random);return {type,notes:QUALITIES[type].offsets.map(n=>root+n)};
+ const root=newRoot(range,QUALITIES[type].offsets.at(-1),previous,random);return {type,notes:QUALITIES[type].offsets.map(n=>root+n)};
 }
 export function createChordAttempt(){
  const tracker=createTracker({tolerance:40,holdMs:500});let index=0,matched=false;
