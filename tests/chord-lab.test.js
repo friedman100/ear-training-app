@@ -5,6 +5,7 @@ test('all four triad formulas, random selection and full note range',()=>{
  const expected={major:[0,4,7],minor:[0,3,7],diminished:[0,3,6],augmented:[0,4,8]};
  for(const range of Object.keys(RANGES))for(const type of Object.keys(expected))for(const rng of [()=>0,()=>.99999,Math.random]){
  const c=newChord(range,type,undefined,rng);assert.deepEqual(c.notes.map(n=>n-c.notes[0]),expected[type]);assert.ok(c.notes[0]>=RANGES[range][0]&&c.notes[2]<=RANGES[range][1]);}
+ for(const v of [0,.25,.49,.5,.75,.999])assert.equal(newChord('middle','major-minor',undefined,()=>v).type,v<.5?'major':'minor');
  for(const [i,type] of Object.keys(expected).entries())assert.equal(newChord('middle','mixed',undefined,()=>(i+.5)/4).type,type);
 });
 test('three sequential stable notes, wrong notes, silence, octave equivalence and retries',()=>{for(const type of Object.keys(QUALITIES)){const c=newChord('middle',type),a=createChordAttempt();let time=0;for(let i=0;i<3;i++){for(let k=0;k<20;k++)a.update({frequency:hz(c.notes[(i+1)%3]),confidence:1},c.notes,time+=50);assert.equal(a.matched,false);for(let k=0;k<16;k++)a.update({frequency:hz(c.notes[i]-12),confidence:1},c.notes,time+=50);assert.equal(a.matched,true);assert.equal(a.complete,i===2);if(i<2){assert.equal(a.advance(),true);assert.equal(a.matched,false);}}a.reset();assert.equal(a.index,0);assert.equal(a.matched,false);assert.equal(a.update(null,c.notes,time+=50).reliable,false);}});
@@ -18,7 +19,7 @@ test('full page: piano gate, three sung targets, popups, replay, retry, new chor
  w.eval((await readFile('lab/chord-separation/main.js','utf8')).replace(/^import .*;\n/gm,''));const flush=async()=>{for(let i=0;i<20;i++)await Promise.resolve();};
  const sing=(midi,start)=>{signal=Float32Array.from({length:4096},(_,i)=>.2*Math.sin(2*Math.PI*hz(midi)*i/48000));for(let t=start;t<start+1000;t+=50)callback(t);};
  assert.ok(d.querySelector('#single-pitch-chart'));assert.equal(requests,0);d.getElementById('mic').click();await flush();assert.equal(requests,1);
- assert.equal(d.querySelectorAll('#quality option').length,5);
+ assert.equal(d.querySelectorAll('#quality option').length,6);assert.deepEqual([...d.querySelectorAll('#quality option')].map(o=>o.value),['major-minor','major','minor','diminished','augmented','mixed']);assert.equal(d.querySelector('#quality').value,'major-minor');
  let notes=[...d.querySelectorAll('#chord-steps strong')].map(e=>e.textContent);
  const midiFor=s=>Array.from({length:72},(_,i)=>i+24).find(n=>name(n)===s);
  sing(midiFor(notes[0]),1000);assert.equal(d.getElementById('matched-dialog').open,false);

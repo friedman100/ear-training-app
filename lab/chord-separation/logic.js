@@ -1,9 +1,10 @@
 import {createTracker} from '../../public/sing-back/pitch.js';
 import {newRoot} from '../harmonic-separation/logic.js';
 export const QUALITIES={major:{label:'מז׳ור · Major',offsets:[0,4,7]},minor:{label:'מינור · Minor',offsets:[0,3,7]},diminished:{label:'מוקטן · Diminished',offsets:[0,3,6]},augmented:{label:'מוגדל · Augmented',offsets:[0,4,8]}};
-export function newChord(range='middle',quality='mixed',previous,random=Math.random){
+export function newChord(range='middle',quality='major-minor',previous,random=Math.random){
  const types=Object.keys(QUALITIES);
- const type=quality==='mixed'?types[Math.min(types.length-1,Math.floor(random()*types.length))]:quality;
+ const pool=quality==='major-minor'?['major','minor']:types;
+ const type=['mixed','major-minor'].includes(quality)?pool[Math.min(pool.length-1,Math.floor(random()*pool.length))]:quality;
  if(!QUALITIES[type])throw new Error('Unknown chord');
  const root=newRoot(range,QUALITIES[type].offsets.at(-1),previous,random);return {type,notes:QUALITIES[type].offsets.map(n=>root+n)};
 }
